@@ -22,27 +22,27 @@ struct PrivacyTarget: Identifiable, Codable, Hashable {
 
     // MARK: - Target Registry
 
-    static let allTargets: [PrivacyTarget] = harmlessTargets + strongTargets + paranoidTargets
+    static let allTargets: [PrivacyTarget] = basicTargets + strongTargets + paranoidTargets
 
     /// Returns all targets that should be enabled for a given cleaning level.
-    /// Harmless → harmless only. Strong → harmless + strong. Paranoid → all.
+    /// Basic → basic only. Strong → basic + strong. Paranoid → all.
     static func targets(for level: CleaningLevel) -> [PrivacyTarget] {
         switch level {
-        case .harmless: return harmlessTargets
-        case .strong:   return harmlessTargets + strongTargets
+        case .basic: return basicTargets
+        case .strong:   return basicTargets + strongTargets
         case .paranoid: return allTargets
         }
     }
 
-    // MARK: - 🟢 Harmless Targets
+    // MARK: - 🟢 Basic Targets
 
-    static let harmlessTargets: [PrivacyTarget] = [
+    static let basicTargets: [PrivacyTarget] = [
         PrivacyTarget(
             id: "ad-privacy",
             name: "Ad Privacy Daemon",
             description: "Advertising privacy configuration and tracking cache used by adprivacyd.",
             path: "~/Library/Caches/com.apple.ap.adprivacyd",
-            level: .harmless,
+            level: .basic,
             sideEffect: "None — disabling ad tracking is the goal",
             supportedStrategies: [.wipeContents, .replaceWithFile],
             defaultStrategy: .wipeContents,
@@ -53,7 +53,7 @@ struct PrivacyTarget: Identifiable, Codable, Hashable {
             name: "AMS Engagement",
             description: "App Store engagement metrics collected by amsengagementd.",
             path: "~/Library/Caches/com.apple.amsengagementd",
-            level: .harmless,
+            level: .basic,
             sideEffect: "None meaningful",
             supportedStrategies: [.wipeContents, .replaceWithFile],
             defaultStrategy: .wipeContents,
@@ -64,7 +64,7 @@ struct PrivacyTarget: Identifiable, Codable, Hashable {
             name: "AMS Metrics",
             description: "Detailed App Store engagement telemetry data.",
             path: "~/Library/Caches/com.apple.AppleMediaServices/Metrics/amsengagementd",
-            level: .harmless,
+            level: .basic,
             sideEffect: "None meaningful",
             supportedStrategies: [.wipeContents, .replaceWithFile],
             defaultStrategy: .wipeContents,
@@ -75,7 +75,7 @@ struct PrivacyTarget: Identifiable, Codable, Hashable {
             name: "Cloud Telemetry (Cache)",
             description: "iCloud telemetry cache used to track sync behaviour.",
             path: "~/Library/Caches/com.apple.CloudTelemetry",
-            level: .harmless,
+            level: .basic,
             sideEffect: "None meaningful",
             supportedStrategies: [.wipeContents, .replaceWithFile],
             defaultStrategy: .wipeContents,
@@ -86,7 +86,7 @@ struct PrivacyTarget: Identifiable, Codable, Hashable {
             name: "Cloud Telemetry (Logs)",
             description: "iCloud telemetry log files recording sync and service events.",
             path: "~/Library/Logs/com.apple.CloudTelemetry",
-            level: .harmless,
+            level: .basic,
             sideEffect: "None meaningful",
             supportedStrategies: [.wipeContents, .replaceWithFile],
             defaultStrategy: .wipeContents,
@@ -97,7 +97,7 @@ struct PrivacyTarget: Identifiable, Codable, Hashable {
             name: "Feedback Logger",
             description: "System feedback and crash analytics cache.",
             path: "~/Library/Caches/com.apple.feedbacklogger",
-            level: .harmless,
+            level: .basic,
             sideEffect: "None meaningful",
             supportedStrategies: [.wipeContents, .replaceWithFile],
             defaultStrategy: .wipeContents,
@@ -108,7 +108,7 @@ struct PrivacyTarget: Identifiable, Codable, Hashable {
             name: "GeoAnalytics",
             description: "Location analytics data collected by geoanalyticsd.",
             path: "~/Library/Caches/com.apple.geoanalyticsd",
-            level: .harmless,
+            level: .basic,
             sideEffect: "None meaningful",
             supportedStrategies: [.wipeContents, .replaceWithFile],
             defaultStrategy: .wipeContents,
@@ -119,7 +119,7 @@ struct PrivacyTarget: Identifiable, Codable, Hashable {
             name: "Proactive EventTracker",
             description: "Proactive suggestion event tracking for predictive features.",
             path: "~/Library/Caches/com.apple.proactive.eventtracker",
-            level: .harmless,
+            level: .basic,
             sideEffect: "None meaningful",
             supportedStrategies: [.wipeContents, .replaceWithFile],
             defaultStrategy: .wipeContents,
@@ -130,7 +130,7 @@ struct PrivacyTarget: Identifiable, Codable, Hashable {
             name: "Safari Web Caches",
             description: "Safari browser cache containing tracking scripts, website assets, and some local session data.",
             path: "~/Library/Containers/com.apple.Safari/Data/Library/Caches",
-            level: .harmless,
+            level: .basic,
             sideEffect: "Warning: May log you out of some browser websites",
             supportedStrategies: [.wipeContents],
             defaultStrategy: .wipeContents,

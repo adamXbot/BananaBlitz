@@ -149,7 +149,7 @@ struct ScanStepView: View {
 
     private func levelDescription(_ level: CleaningLevel) -> String {
         switch level {
-        case .harmless: return "Always safe to clean"
+        case .basic: return "Always safe to clean"
         case .strong:   return "Smart features may degrade"
         case .paranoid: return "Some things may break"
         }

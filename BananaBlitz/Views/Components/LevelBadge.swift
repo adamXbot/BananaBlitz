@@ -35,7 +35,7 @@ struct StatusDot: View {
 
 #Preview {
     VStack(spacing: 12) {
-        LevelBadge(level: .harmless)
+        LevelBadge(level: .basic)
         LevelBadge(level: .strong)
         LevelBadge(level: .paranoid)
         HStack {

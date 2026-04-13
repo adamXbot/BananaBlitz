@@ -3,7 +3,7 @@ import SwiftUI
 /// Represents the aggressiveness of privacy cleaning.
 /// Users choose a level during onboarding, which pre-selects which targets to clean.
 enum CleaningLevel: String, CaseIterable, Codable, Identifiable {
-    case harmless
+    case basic
     case strong
     case paranoid
 
@@ -11,7 +11,7 @@ enum CleaningLevel: String, CaseIterable, Codable, Identifiable {
 
     var displayName: String {
         switch self {
-        case .harmless: return "Harmless"
+        case .basic: return "Basic"
         case .strong:   return "Strong"
         case .paranoid: return "Paranoid"
         }
@@ -19,7 +19,7 @@ enum CleaningLevel: String, CaseIterable, Codable, Identifiable {
 
     var emoji: String {
         switch self {
-        case .harmless: return "🟢"
+        case .basic: return "🟢"
         case .strong:   return "🟡"
         case .paranoid: return "🔴"
         }
@@ -27,7 +27,7 @@ enum CleaningLevel: String, CaseIterable, Codable, Identifiable {
 
     var color: Color {
         switch self {
-        case .harmless: return .green
+        case .basic: return .green
         case .strong:   return .orange
         case .paranoid: return .red
         }
@@ -35,7 +35,7 @@ enum CleaningLevel: String, CaseIterable, Codable, Identifiable {
 
     var description: String {
         switch self {
-        case .harmless: return "Clean only analytics and metrics. Nothing breaks."
+        case .basic: return "Clean only analytics and metrics. Nothing breaks."
         case .strong:   return "Also clean intelligence databases. Suggestions get dumber."
         case .paranoid: return "Clean everything. Maximum privacy. Some features may temporarily break."
         }
@@ -43,7 +43,7 @@ enum CleaningLevel: String, CaseIterable, Codable, Identifiable {
 
     var icon: String {
         switch self {
-        case .harmless: return "shield"
+        case .basic: return "shield"
         case .strong:   return "shield.lefthalf.filled"
         case .paranoid: return "shield.fill"
         }

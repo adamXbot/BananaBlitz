@@ -4,8 +4,11 @@ BananaBlitz is a lightweight, stealthy native macOS utility that helps you recla
 
 Instead of needing `sudo` or disabling System Integrity Protection (SIP), BananaBlitz uses macOS native constructs (`chflags`) to selectively neuter unwanted directories and stop Apple daemons from logging metrics, without risking breaking your OS!
 
+> [!CAUTION]
+> **Use at your own risk.** BananaBlitz modifies system-generated files and directories within your `~/Library` folder using aggressive locking mechanisms (`chflags`). While designed to be non-destructive, the developers are not responsible for any data loss, system instability, or unexpected behavior resulting from the use of this utility. Always ensure you have a recent backup of your data.
+
 ## Features
-- **3 Privacy Levels:** Select from Harmless (caches), Strong (Biome intelligence), and Paranoid (screentime, Siri profiling).
+- **3 Privacy Levels:** Select from Basic (caches), Strong (Biome intelligence), and Paranoid (screentime, Siri profiling).
 - **Stealth Background Execution:** Set schedules to clean hourly, daily, or on-demand.
 - **Smart Directory Locking:** Replace directories with immutable empty files to block intrusive re-creations natively using `uchg`.
 - **Menu Bar Ready:** Fully built for your menu bar, cleanly getting out of the way.
