@@ -1,0 +1,450 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		058FF9AAF126491FAF0CC9A2 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8F5D85902F4ACD040856A6FC /* SettingsView.swift */; };
+		11F13C27AB4A91E01B9BE11F /* CleanStepView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2E79ED62287B0AC75263B6C /* CleanStepView.swift */; };
+		1449D943AB6E7660A064EEE9 /* TargetScanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = B7F73D43CE93B468A919F661 /* TargetScanner.swift */; };
+		26406D40C9D9D589D4C2ED0C /* TargetListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DC2C54C0A177BB7EB8FE1C11 /* TargetListView.swift */; };
+		2673644DF15B6431E452A0C5 /* AppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABD45398FA2E17BC73E4D08F /* AppState.swift */; };
+		2B3982B04AB21F3D56BF5AD6 /* CleaningLevel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D17B45C2A13F3A4EF9DDB7C /* CleaningLevel.swift */; };
+		3DBDE919A07B9695BDA30259 /* CleaningResult.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A5BD8D3427FDED33C084E99 /* CleaningResult.swift */; };
+		3EDBD173EDD21D0AAE9CE3D6 /* PermissionStepView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4FD9ECED711067918E8D41FD /* PermissionStepView.swift */; };
+		3F5BC0B24A894C76D8DA12F8 /* BananaBlitzApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8342D8731EE9B3E3708471DC /* BananaBlitzApp.swift */; };
+		47D0896AE936F4E071629340 /* LevelBadge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 96B8BA04DE5D8459D35F2D31 /* LevelBadge.swift */; };
+		4E88FBC694F5E4DC773107FC /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 2BE15EDD4B2DCBA126162B14 /* Assets.xcassets */; };
+		61A475AF0007E4A5744149CF /* DashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A1A4AF392783E508A721F54 /* DashboardView.swift */; };
+		6776826A837A8B0AE52537B5 /* FileSystemGuard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5AA5CBB296DE358249DF36A0 /* FileSystemGuard.swift */; };
+		76526CED2CE4F72FF9494AE2 /* LevelPickerStepView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5D297ECFA9D05F9CEC728E12 /* LevelPickerStepView.swift */; };
+		7BF935C217B3AC830F75C2A9 /* SchedulerService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3DAAAD84688C64B020D9A7C8 /* SchedulerService.swift */; };
+		834EBB03F125C79CBB904D8B /* TargetRowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 475B47537280016C908A59F3 /* TargetRowView.swift */; };
+		8475AEA70053F01D57AD70B1 /* ScanStepView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 41C90FC61468F40C68CA9B8D /* ScanStepView.swift */; };
+		8AFADD756194AB33002AE1A5 /* PrivacyTarget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A43F0620A5A81B210F3B2EC /* PrivacyTarget.swift */; };
+		9574331089D533063EB88EC5 /* CleanButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 31514E94FD6C8886E0E7F85B /* CleanButton.swift */; };
+		A9EE380D488359F014E6CC90 /* CleaningStrategy.swift in Sources */ = {isa = PBXBuildFile; fileRef = 41FC0A55800955F7B5FF3A7F /* CleaningStrategy.swift */; };
+		C343E49B065D12BE6A63D35C /* MenuBarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E8B5C1995E6D1BBE894F4261 /* MenuBarView.swift */; };
+		C3C9BED968B3F14D3866567A /* PrivacyCleaner.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2E84D31ADCEC54AD8775F527 /* PrivacyCleaner.swift */; };
+		C5E706AF87BB640796AB8C20 /* OnboardingContainerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E5172E94F4FCF629C6273FB8 /* OnboardingContainerView.swift */; };
+		D52A647FC40C5AE7A539271C /* SizeLabel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B4DC1970F50185CCEEF4C26 /* SizeLabel.swift */; };
+		F5A524B4A9D9261EB7C9C498 /* PermissionChecker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74DBE63813C38B4D54CF5E23 /* PermissionChecker.swift */; };
+		F7C507F7CDDB351E1E1B4D96 /* WelcomeStepView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 25FEAD376FAEDDBB8430E4D1 /* WelcomeStepView.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		25FEAD376FAEDDBB8430E4D1 /* WelcomeStepView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WelcomeStepView.swift; sourceTree = "<group>"; };
+		2A1A4AF392783E508A721F54 /* DashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardView.swift; sourceTree = "<group>"; };
+		2BE15EDD4B2DCBA126162B14 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		2E84D31ADCEC54AD8775F527 /* PrivacyCleaner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrivacyCleaner.swift; sourceTree = "<group>"; };
+		31514E94FD6C8886E0E7F85B /* CleanButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CleanButton.swift; sourceTree = "<group>"; };
+		3A5BD8D3427FDED33C084E99 /* CleaningResult.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CleaningResult.swift; sourceTree = "<group>"; };
+		3DAAAD84688C64B020D9A7C8 /* SchedulerService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SchedulerService.swift; sourceTree = "<group>"; };
+		41C90FC61468F40C68CA9B8D /* ScanStepView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScanStepView.swift; sourceTree = "<group>"; };
+		41FC0A55800955F7B5FF3A7F /* CleaningStrategy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CleaningStrategy.swift; sourceTree = "<group>"; };
+		475B47537280016C908A59F3 /* TargetRowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TargetRowView.swift; sourceTree = "<group>"; };
+		4FD9ECED711067918E8D41FD /* PermissionStepView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PermissionStepView.swift; sourceTree = "<group>"; };
+		5A43F0620A5A81B210F3B2EC /* PrivacyTarget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrivacyTarget.swift; sourceTree = "<group>"; };
+		5AA5CBB296DE358249DF36A0 /* FileSystemGuard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileSystemGuard.swift; sourceTree = "<group>"; };
+		5B4DC1970F50185CCEEF4C26 /* SizeLabel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SizeLabel.swift; sourceTree = "<group>"; };
+		5D297ECFA9D05F9CEC728E12 /* LevelPickerStepView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LevelPickerStepView.swift; sourceTree = "<group>"; };
+		65CDF55FBE14158172846EC9 /* BananaBlitz.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = BananaBlitz.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		74DBE63813C38B4D54CF5E23 /* PermissionChecker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PermissionChecker.swift; sourceTree = "<group>"; };
+		7D17B45C2A13F3A4EF9DDB7C /* CleaningLevel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CleaningLevel.swift; sourceTree = "<group>"; };
+		8342D8731EE9B3E3708471DC /* BananaBlitzApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BananaBlitzApp.swift; sourceTree = "<group>"; };
+		8F5D85902F4ACD040856A6FC /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		96B8BA04DE5D8459D35F2D31 /* LevelBadge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LevelBadge.swift; sourceTree = "<group>"; };
+		ABD45398FA2E17BC73E4D08F /* AppState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppState.swift; sourceTree = "<group>"; };
+		B7F73D43CE93B468A919F661 /* TargetScanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TargetScanner.swift; sourceTree = "<group>"; };
+		C2E79ED62287B0AC75263B6C /* CleanStepView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CleanStepView.swift; sourceTree = "<group>"; };
+		DC2C54C0A177BB7EB8FE1C11 /* TargetListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TargetListView.swift; sourceTree = "<group>"; };
+		E5172E94F4FCF629C6273FB8 /* OnboardingContainerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingContainerView.swift; sourceTree = "<group>"; };
+		E8B5C1995E6D1BBE894F4261 /* MenuBarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuBarView.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXGroup section */
+		21031C95D55F669785A7A823 /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				ABD45398FA2E17BC73E4D08F /* AppState.swift */,
+				7D17B45C2A13F3A4EF9DDB7C /* CleaningLevel.swift */,
+				3A5BD8D3427FDED33C084E99 /* CleaningResult.swift */,
+				41FC0A55800955F7B5FF3A7F /* CleaningStrategy.swift */,
+				5A43F0620A5A81B210F3B2EC /* PrivacyTarget.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		3BD78E46ED756E620850B6FD = {
+			isa = PBXGroup;
+			children = (
+				58B9FD80E5FDE9B6B3D36562 /* BananaBlitz */,
+				67170EEB67C2AB722BE774CA /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		48CA41DB08E2F592F1A5A441 /* Onboarding */ = {
+			isa = PBXGroup;
+			children = (
+				C2E79ED62287B0AC75263B6C /* CleanStepView.swift */,
+				5D297ECFA9D05F9CEC728E12 /* LevelPickerStepView.swift */,
+				E5172E94F4FCF629C6273FB8 /* OnboardingContainerView.swift */,
+				4FD9ECED711067918E8D41FD /* PermissionStepView.swift */,
+				41C90FC61468F40C68CA9B8D /* ScanStepView.swift */,
+				25FEAD376FAEDDBB8430E4D1 /* WelcomeStepView.swift */,
+			);
+			path = Onboarding;
+			sourceTree = "<group>";
+		};
+		58B9FD80E5FDE9B6B3D36562 /* BananaBlitz */ = {
+			isa = PBXGroup;
+			children = (
+				2BE15EDD4B2DCBA126162B14 /* Assets.xcassets */,
+				8342D8731EE9B3E3708471DC /* BananaBlitzApp.swift */,
+				21031C95D55F669785A7A823 /* Models */,
+				B34074A32CA01799178FB6CD /* Services */,
+				BB6605FB6CB00145EA090F73 /* Views */,
+			);
+			path = BananaBlitz;
+			sourceTree = "<group>";
+		};
+		60310E716193D113B058AEE2 /* Components */ = {
+			isa = PBXGroup;
+			children = (
+				31514E94FD6C8886E0E7F85B /* CleanButton.swift */,
+				96B8BA04DE5D8459D35F2D31 /* LevelBadge.swift */,
+				5B4DC1970F50185CCEEF4C26 /* SizeLabel.swift */,
+				475B47537280016C908A59F3 /* TargetRowView.swift */,
+			);
+			path = Components;
+			sourceTree = "<group>";
+		};
+		67170EEB67C2AB722BE774CA /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				65CDF55FBE14158172846EC9 /* BananaBlitz.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		B34074A32CA01799178FB6CD /* Services */ = {
+			isa = PBXGroup;
+			children = (
+				5AA5CBB296DE358249DF36A0 /* FileSystemGuard.swift */,
+				74DBE63813C38B4D54CF5E23 /* PermissionChecker.swift */,
+				2E84D31ADCEC54AD8775F527 /* PrivacyCleaner.swift */,
+				3DAAAD84688C64B020D9A7C8 /* SchedulerService.swift */,
+				B7F73D43CE93B468A919F661 /* TargetScanner.swift */,
+			);
+			path = Services;
+			sourceTree = "<group>";
+		};
+		BB6605FB6CB00145EA090F73 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				2A1A4AF392783E508A721F54 /* DashboardView.swift */,
+				E8B5C1995E6D1BBE894F4261 /* MenuBarView.swift */,
+				8F5D85902F4ACD040856A6FC /* SettingsView.swift */,
+				DC2C54C0A177BB7EB8FE1C11 /* TargetListView.swift */,
+				60310E716193D113B058AEE2 /* Components */,
+				48CA41DB08E2F592F1A5A441 /* Onboarding */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		497A5C6D5706E9CA348D637A /* BananaBlitz */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 1D461475F9F1C9D42E24C34B /* Build configuration list for PBXNativeTarget "BananaBlitz" */;
+			buildPhases = (
+				FCCC98FA9CF394EA0ED03B80 /* Sources */,
+				ACBCF39A46860D72BBC05EDF /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = BananaBlitz;
+			packageProductDependencies = (
+			);
+			productName = BananaBlitz;
+			productReference = 65CDF55FBE14158172846EC9 /* BananaBlitz.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		0ECDE3AACD7E137087928F34 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1430;
+				TargetAttributes = {
+					497A5C6D5706E9CA348D637A = {
+						ProvisioningStyle = Manual;
+					};
+				};
+			};
+			buildConfigurationList = AE3517AE2F767C411B9F8B58 /* Build configuration list for PBXProject "BananaBlitz" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = 3BD78E46ED756E620850B6FD;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 67170EEB67C2AB722BE774CA /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				497A5C6D5706E9CA348D637A /* BananaBlitz */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		ACBCF39A46860D72BBC05EDF /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				4E88FBC694F5E4DC773107FC /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		FCCC98FA9CF394EA0ED03B80 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				2673644DF15B6431E452A0C5 /* AppState.swift in Sources */,
+				3F5BC0B24A894C76D8DA12F8 /* BananaBlitzApp.swift in Sources */,
+				9574331089D533063EB88EC5 /* CleanButton.swift in Sources */,
+				11F13C27AB4A91E01B9BE11F /* CleanStepView.swift in Sources */,
+				2B3982B04AB21F3D56BF5AD6 /* CleaningLevel.swift in Sources */,
+				3DBDE919A07B9695BDA30259 /* CleaningResult.swift in Sources */,
+				A9EE380D488359F014E6CC90 /* CleaningStrategy.swift in Sources */,
+				61A475AF0007E4A5744149CF /* DashboardView.swift in Sources */,
+				6776826A837A8B0AE52537B5 /* FileSystemGuard.swift in Sources */,
+				47D0896AE936F4E071629340 /* LevelBadge.swift in Sources */,
+				76526CED2CE4F72FF9494AE2 /* LevelPickerStepView.swift in Sources */,
+				C343E49B065D12BE6A63D35C /* MenuBarView.swift in Sources */,
+				C5E706AF87BB640796AB8C20 /* OnboardingContainerView.swift in Sources */,
+				F5A524B4A9D9261EB7C9C498 /* PermissionChecker.swift in Sources */,
+				3EDBD173EDD21D0AAE9CE3D6 /* PermissionStepView.swift in Sources */,
+				C3C9BED968B3F14D3866567A /* PrivacyCleaner.swift in Sources */,
+				8AFADD756194AB33002AE1A5 /* PrivacyTarget.swift in Sources */,
+				8475AEA70053F01D57AD70B1 /* ScanStepView.swift in Sources */,
+				7BF935C217B3AC830F75C2A9 /* SchedulerService.swift in Sources */,
+				058FF9AAF126491FAF0CC9A2 /* SettingsView.swift in Sources */,
+				D52A647FC40C5AE7A539271C /* SizeLabel.swift in Sources */,
+				26406D40C9D9D589D4C2ED0C /* TargetListView.swift in Sources */,
+				834EBB03F125C79CBB904D8B /* TargetRowView.swift in Sources */,
+				1449D943AB6E7660A064EEE9 /* TargetScanner.swift in Sources */,
+				F7C507F7CDDB351E1E1B4D96 /* WelcomeStepView.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		465B95A2DF4556B71373CCD3 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = BananaBlitz/BananaBlitz.entitlements;
+				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_STYLE = Manual;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_APP_SANDBOX = NO;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = BananaBlitz/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MARKETING_VERSION = 1.0.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.bananablitz.app;
+				SDKROOT = macosx;
+			};
+			name = Debug;
+		};
+		7DB1F933264EE2805943B7BF /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEAD_CODE_STRIPPING = YES;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5;
+			};
+			name = Release;
+		};
+		CB0784E6F56B64E9E8D4F256 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = BananaBlitz/BananaBlitz.entitlements;
+				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_STYLE = Manual;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_APP_SANDBOX = NO;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = BananaBlitz/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MARKETING_VERSION = 1.0.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.bananablitz.app;
+				SDKROOT = macosx;
+			};
+			name = Release;
+		};
+		D24A743DD5F13D2BD820B52F /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEAD_CODE_STRIPPING = YES;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5;
+			};
+			name = Debug;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		1D461475F9F1C9D42E24C34B /* Build configuration list for PBXNativeTarget "BananaBlitz" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				465B95A2DF4556B71373CCD3 /* Debug */,
+				CB0784E6F56B64E9E8D4F256 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		AE3517AE2F767C411B9F8B58 /* Build configuration list for PBXProject "BananaBlitz" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				D24A743DD5F13D2BD820B52F /* Debug */,
+				7DB1F933264EE2805943B7BF /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 0ECDE3AACD7E137087928F34 /* Project object */;
+}
