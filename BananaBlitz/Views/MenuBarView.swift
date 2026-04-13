@@ -80,7 +80,7 @@ struct MenuBarView: View {
             VStack(alignment: .trailing, spacing: 2) {
                 Text(appState.totalBytesReclaimed.formattedBytes)
                     .font(.system(size: 16, weight: .bold, design: .rounded))
-                Text("total reclaimed")
+                Text("total reclaimed (all time)")
                     .font(.system(size: 9))
                     .foregroundStyle(.tertiary)
             }
@@ -170,6 +170,7 @@ struct MenuBarView: View {
     private var footerSection: some View {
         HStack {
             Button {
+                NSApplication.shared.activate(ignoringOtherApps: true)
                 openWindow(id: "settings")
             } label: {
                 HStack(spacing: 4) {

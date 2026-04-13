@@ -67,6 +67,7 @@ class AppState: ObservableObject {
     @AppStorage("notificationStyleRaw") var notificationStyleRaw: String = NotificationStyle.summary.rawValue
     @AppStorage("launchAtLogin") var launchAtLogin: Bool = false
     @AppStorage("isPaused") var isPaused: Bool = false
+    @AppStorage("showMenuBarStatus") var showMenuBarStatus: Bool = true
 
     // MARK: Published State
 
@@ -100,6 +101,22 @@ class AppState: ObservableObject {
         get { NotificationStyle(rawValue: notificationStyleRaw) ?? .summary }
         set {
             notificationStyleRaw = newValue.rawValue
+            objectWillChange.send()
+        }
+    }
+
+    @AppStorage("globalStrategyRaw") var globalStrategyRaw: String = CleaningStrategy.wipeContents.rawValue
+
+    var globalStrategy: CleaningStrategy {
+        get { CleaningStrategy(rawValue: globalStrategyRaw) ?? .wipeContents }
+        set {
+            globalStrategyRaw = newValue.rawValue
+            for target in PrivacyTarget.allTargets {
+                if target.supportedStrategies.contains(newValue) {
+                    targetStrategies[target.id] = newValue
+                }
+            }
+            savePersistedData()
             objectWillChange.send()
         }
     }

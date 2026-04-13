@@ -6,7 +6,9 @@ struct TargetRowView: View {
     let size: Int64
     let isEnabled: Bool
     let isLocked: Bool
+    let strategy: CleaningStrategy
     let onToggle: () -> Void
+    let onStrategyChange: (CleaningStrategy) -> Void
 
     @State private var isExpanded = false
     @State private var isHovered = false
@@ -87,6 +89,38 @@ struct TargetRowView: View {
                             .foregroundStyle(.tertiary)
                             .lineLimit(1)
                             .truncationMode(.middle)
+                    }
+                    
+                    if target.supportedStrategies.count > 1 {
+                        HStack(spacing: 4) {
+                            Image(systemName: "wrench.and.screwdriver")
+                                .font(.system(size: 10))
+                                .foregroundStyle(.tertiary)
+                            Text("Strategy:")
+                                .font(.system(size: 10))
+                                .foregroundStyle(.secondary)
+                            
+                            Picker("", selection: Binding(
+                                get: { strategy },
+                                set: { onStrategyChange($0) }
+                            )) {
+                                ForEach(target.supportedStrategies) { s in
+                                    Text(s.displayName).tag(s)
+                                }
+                            }
+                            .pickerStyle(.menu)
+                            .controlSize(.mini)
+                            .labelsHidden()
+                        }
+                    } else {
+                        HStack(spacing: 4) {
+                            Image(systemName: "wrench.and.screwdriver")
+                                .font(.system(size: 10))
+                                .foregroundStyle(.tertiary)
+                            Text("Strategy: \(strategy.displayName) (Only supported method)")
+                                .font(.system(size: 10))
+                                .foregroundStyle(.secondary)
+                        }
                     }
                 }
                 .padding(.horizontal, 48)

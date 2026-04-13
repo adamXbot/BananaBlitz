@@ -13,6 +13,11 @@ struct BananaBlitzApp: App {
                 .environmentObject(appState)
                 .environmentObject(scheduler)
                 .onAppear {
+                    // Activate app to foreground on first launch so onboarding takes focus
+                    if !appState.hasCompletedOnboarding {
+                        NSApplication.shared.activate(ignoringOtherApps: true)
+                    }
+
                     // Wire up the scheduler on first appearance
                     scheduler.configure(with: appState)
 
@@ -30,7 +35,24 @@ struct BananaBlitzApp: App {
                     }
                 }
         } label: {
-            Label("BananaBlitz", systemImage: "shield.checkered")
+            HStack(spacing: 3) {
+                Text("🍌")
+                
+                if appState.showMenuBarStatus {
+                    Group {
+                        if !appState.hasCompletedOnboarding {
+                            Image(systemName: "exclamationmark.triangle.fill")
+                        } else if appState.isCurrentlyCleaning {
+                            Image(systemName: "bolt.fill")
+                        } else if appState.isPaused {
+                            Image(systemName: "pause.fill")
+                        } else if appState.scheduleInterval != .manual {
+                            Image(systemName: "clock")
+                        }
+                    }
+                    .font(.system(size: 9, weight: .bold))
+                }
+            }
         }
         .menuBarExtraStyle(.window)
 

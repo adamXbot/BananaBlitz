@@ -9,7 +9,7 @@ struct DashboardView: View {
             // Hero stat cards
             HStack(spacing: 16) {
                 statCard(
-                    title: "Total Reclaimed",
+                    title: "Total Reclaimed (All Time)",
                     value: appState.totalBytesReclaimed.formattedBytes,
                     icon: "arrow.down.circle.fill",
                     color: .green

@@ -5,6 +5,8 @@ import ServiceManagement
 struct SettingsView: View {
     @EnvironmentObject var appState: AppState
     @EnvironmentObject var scheduler: SchedulerService
+    @Environment(\.openWindow) private var openWindow
+    @Environment(\.dismiss) private var dismiss
 
     @State private var selectedTab = 0
 
@@ -67,6 +69,7 @@ struct SettingsView: View {
                 RoundedRectangle(cornerRadius: 8)
                     .fill(selectedTab == index ? Color.accentColor.opacity(0.1) : .clear)
             )
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
     }
@@ -104,6 +107,7 @@ struct SettingsView: View {
                         Text(interval.displayName).tag(interval)
                     }
                 }
+                .pickerStyle(.menu)
 
                 Toggle("Pause Schedule", isOn: Binding(
                     get: { appState.isPaused },
@@ -139,33 +143,51 @@ struct SettingsView: View {
                         .tag(level)
                     }
                 }
+                .pickerStyle(.menu)
 
                 Text(appState.selectedLevel.description)
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
 
-            Section("Default Cleaning Strategy") {
-                ForEach(CleaningStrategy.allCases) { strategy in
-                    HStack(spacing: 10) {
-                        Image(systemName: strategy.icon)
-                            .foregroundStyle(.secondary)
-                            .frame(width: 20)
-                        VStack(alignment: .leading) {
+            Section(header: Text("Global Default Strategy"), footer: Text("Changing this will apply the strategy to all enabled targets that support it. You can still finely tune specific strategies per-target under the Targets tab.")) {
+                Picker("Strategy Override", selection: Binding(
+                    get: { appState.globalStrategy },
+                    set: { appState.globalStrategy = $0 }
+                )) {
+                    ForEach(CleaningStrategy.allCases) { strategy in
+                        HStack {
+                            Image(systemName: strategy.icon)
                             Text(strategy.displayName)
-                                .font(.system(size: 12, weight: .medium))
-                            Text(strategy.description)
-                                .font(.system(size: 10))
-                                .foregroundStyle(.secondary)
                         }
-                        Spacer()
-                        if strategy.isAggressive {
-                            LevelBadge(level: .paranoid)
-                        }
+                        .tag(strategy)
                     }
-                    .padding(.vertical, 4)
                 }
+                .pickerStyle(.menu)
+                
+                // Show explanations for the global strategies
+                VStack(spacing: 8) {
+                    ForEach(CleaningStrategy.allCases) { strategy in
+                        HStack(spacing: 12) {
+                            Image(systemName: strategy.icon)
+                                .foregroundStyle(.secondary)
+                                .frame(width: 16)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(strategy.displayName)
+                                    .font(.system(size: 11, weight: .semibold))
+                                Text(strategy.description)
+                                    .font(.system(size: 10))
+                                    .foregroundStyle(.secondary)
+                            }
+                            Spacer()
+                        }
+                        .padding(.vertical, 2)
+                    }
+                }
+                .padding(.top, 4)
             }
+
+
         }
         .formStyle(.grouped)
         .scrollContentBackground(.hidden)
@@ -190,13 +212,18 @@ struct SettingsView: View {
                 }
             }
 
-            Section("Startup") {
+            Section("Preferences") {
                 Toggle("Launch at Login", isOn: Binding(
                     get: { appState.launchAtLogin },
                     set: { newValue in
                         appState.launchAtLogin = newValue
                         updateLoginItem(enabled: newValue)
                     }
+                ))
+                
+                Toggle("Show Menu Bar Status Icons", isOn: Binding(
+                    get: { appState.showMenuBarStatus },
+                    set: { appState.showMenuBarStatus = $0 }
                 ))
             }
 
@@ -237,6 +264,9 @@ struct SettingsView: View {
                     appState.totalBytesReclaimed = 0
                     appState.lastCleanDate = nil
                     appState.savePersistedData()
+                    
+                    dismiss()
+                    openWindow(id: "onboarding")
                 }
             }
         }

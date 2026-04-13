@@ -88,7 +88,9 @@ struct TargetListView: View {
                     size: appState.scanResults[target.id] ?? 0,
                     isEnabled: appState.isTargetEnabled(target),
                     isLocked: TargetScanner.shared.isLocked(target),
-                    onToggle: { appState.toggleTarget(target) }
+                    strategy: appState.strategyFor(target),
+                    onToggle: { appState.toggleTarget(target) },
+                    onStrategyChange: { appState.setStrategy($0, for: target) }
                 )
                 .padding(.horizontal, 8)
             }

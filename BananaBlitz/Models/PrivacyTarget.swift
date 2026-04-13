@@ -125,6 +125,17 @@ struct PrivacyTarget: Identifiable, Codable, Hashable {
             defaultStrategy: .wipeContents,
             isSpecificFile: false
         ),
+        PrivacyTarget(
+            id: "safari-caches",
+            name: "Safari Web Caches",
+            description: "Safari browser cache containing tracking scripts, website assets, and some local session data.",
+            path: "~/Library/Containers/com.apple.Safari/Data/Library/Caches",
+            level: .harmless,
+            sideEffect: "Warning: May log you out of some browser websites",
+            supportedStrategies: [.wipeContents],
+            defaultStrategy: .wipeContents,
+            isSpecificFile: false
+        ),
     ]
 
     // MARK: - 🟡 Strong Targets
