@@ -18,6 +18,7 @@
 		3F5BC0B24A894C76D8DA12F8 /* BananaBlitzApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8342D8731EE9B3E3708471DC /* BananaBlitzApp.swift */; };
 		45549DAC3FB920FC15951B70 /* ScheduleStepView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DA56C545D896CF4823D54C8A /* ScheduleStepView.swift */; };
 		47D0896AE936F4E071629340 /* LevelBadge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 96B8BA04DE5D8459D35F2D31 /* LevelBadge.swift */; };
+		4B9ADC76533A1D9F9724CEE3 /* SnapshotService.swift in Sources */ = {isa = PBXBuildFile; fileRef = ED60338FDBADB5D306DE88D1 /* SnapshotService.swift */; };
 		4E88FBC694F5E4DC773107FC /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 2BE15EDD4B2DCBA126162B14 /* Assets.xcassets */; };
 		61A475AF0007E4A5744149CF /* DashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A1A4AF392783E508A721F54 /* DashboardView.swift */; };
 		6776826A837A8B0AE52537B5 /* FileSystemGuard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5AA5CBB296DE358249DF36A0 /* FileSystemGuard.swift */; };
@@ -32,6 +33,7 @@
 		C3C9BED968B3F14D3866567A /* PrivacyCleaner.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2E84D31ADCEC54AD8775F527 /* PrivacyCleaner.swift */; };
 		C5E706AF87BB640796AB8C20 /* OnboardingContainerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E5172E94F4FCF629C6273FB8 /* OnboardingContainerView.swift */; };
 		D52A647FC40C5AE7A539271C /* SizeLabel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B4DC1970F50185CCEEF4C26 /* SizeLabel.swift */; };
+		DC75081C0D440BB48A52841C /* SnapshotStepView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A6519EC7826C7792D1D2CED3 /* SnapshotStepView.swift */; };
 		F5A524B4A9D9261EB7C9C498 /* PermissionChecker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74DBE63813C38B4D54CF5E23 /* PermissionChecker.swift */; };
 		F7C507F7CDDB351E1E1B4D96 /* WelcomeStepView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 25FEAD376FAEDDBB8430E4D1 /* WelcomeStepView.swift */; };
 /* End PBXBuildFile section */
@@ -58,6 +60,7 @@
 		8342D8731EE9B3E3708471DC /* BananaBlitzApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BananaBlitzApp.swift; sourceTree = "<group>"; };
 		8F5D85902F4ACD040856A6FC /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		96B8BA04DE5D8459D35F2D31 /* LevelBadge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LevelBadge.swift; sourceTree = "<group>"; };
+		A6519EC7826C7792D1D2CED3 /* SnapshotStepView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SnapshotStepView.swift; sourceTree = "<group>"; };
 		ABD45398FA2E17BC73E4D08F /* AppState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppState.swift; sourceTree = "<group>"; };
 		B7F73D43CE93B468A919F661 /* TargetScanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TargetScanner.swift; sourceTree = "<group>"; };
 		C2E79ED62287B0AC75263B6C /* CleanStepView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CleanStepView.swift; sourceTree = "<group>"; };
@@ -65,6 +68,7 @@
 		DC2C54C0A177BB7EB8FE1C11 /* TargetListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TargetListView.swift; sourceTree = "<group>"; };
 		E5172E94F4FCF629C6273FB8 /* OnboardingContainerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingContainerView.swift; sourceTree = "<group>"; };
 		E8B5C1995E6D1BBE894F4261 /* MenuBarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuBarView.swift; sourceTree = "<group>"; };
+		ED60338FDBADB5D306DE88D1 /* SnapshotService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SnapshotService.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
@@ -97,6 +101,7 @@
 				4FD9ECED711067918E8D41FD /* PermissionStepView.swift */,
 				41C90FC61468F40C68CA9B8D /* ScanStepView.swift */,
 				DA56C545D896CF4823D54C8A /* ScheduleStepView.swift */,
+				A6519EC7826C7792D1D2CED3 /* SnapshotStepView.swift */,
 				25FEAD376FAEDDBB8430E4D1 /* WelcomeStepView.swift */,
 			);
 			path = Onboarding;
@@ -140,6 +145,7 @@
 				74DBE63813C38B4D54CF5E23 /* PermissionChecker.swift */,
 				2E84D31ADCEC54AD8775F527 /* PrivacyCleaner.swift */,
 				3DAAAD84688C64B020D9A7C8 /* SchedulerService.swift */,
+				ED60338FDBADB5D306DE88D1 /* SnapshotService.swift */,
 				B7F73D43CE93B468A919F661 /* TargetScanner.swift */,
 			);
 			path = Services;
@@ -250,6 +256,8 @@
 				7BF935C217B3AC830F75C2A9 /* SchedulerService.swift in Sources */,
 				058FF9AAF126491FAF0CC9A2 /* SettingsView.swift in Sources */,
 				D52A647FC40C5AE7A539271C /* SizeLabel.swift in Sources */,
+				4B9ADC76533A1D9F9724CEE3 /* SnapshotService.swift in Sources */,
+				DC75081C0D440BB48A52841C /* SnapshotStepView.swift in Sources */,
 				26406D40C9D9D589D4C2ED0C /* TargetListView.swift in Sources */,
 				834EBB03F125C79CBB904D8B /* TargetRowView.swift in Sources */,
 				1449D943AB6E7660A064EEE9 /* TargetScanner.swift in Sources */,
@@ -264,13 +272,11 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
 				CODE_SIGN_ENTITLEMENTS = BananaBlitz/BananaBlitz.entitlements;
 				CODE_SIGN_IDENTITY = "-";
-				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "-";
 				CODE_SIGN_STYLE = Manual;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 2;
+				CURRENT_PROJECT_VERSION = 1;
 				ENABLE_APP_SANDBOX = NO;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = BananaBlitz/Info.plist;
@@ -280,7 +286,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 0.0.1;
+				MARKETING_VERSION = 0.0.2;
 				PRODUCT_BUNDLE_IDENTIFIER = com.bananablitz.app;
 				SDKROOT = macosx;
 			};
@@ -347,13 +353,11 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
 				CODE_SIGN_ENTITLEMENTS = BananaBlitz/BananaBlitz.entitlements;
 				CODE_SIGN_IDENTITY = "-";
-				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "-";
 				CODE_SIGN_STYLE = Manual;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 2;
+				CURRENT_PROJECT_VERSION = 1;
 				ENABLE_APP_SANDBOX = NO;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = BananaBlitz/Info.plist;
@@ -363,7 +367,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 0.0.1;
+				MARKETING_VERSION = 0.0.2;
 				PRODUCT_BUNDLE_IDENTIFIER = com.bananablitz.app;
 				SDKROOT = macosx;
 			};

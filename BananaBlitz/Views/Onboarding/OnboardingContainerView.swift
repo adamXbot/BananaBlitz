@@ -10,7 +10,7 @@ struct OnboardingContainerView: View {
     @State private var scanResults: [String: Int64] = [:]
     @State private var isScanning = false
 
-    private let totalSteps = 6
+    private let totalSteps = 7
 
     var body: some View {
         VStack(spacing: 0) {
@@ -23,9 +23,10 @@ struct OnboardingContainerView: View {
                 case 0: WelcomeStepView()
                 case 1: PermissionStepView()
                 case 2: ScanStepView(scanResults: $scanResults, isScanning: $isScanning)
-                case 3: LevelPickerStepView(scanResults: scanResults)
-                case 4: ScheduleStepView()
-                case 5: CleanStepView(scanResults: scanResults)
+                case 3: SnapshotStepView()
+                case 4: LevelPickerStepView(scanResults: scanResults)
+                case 5: ScheduleStepView()
+                case 6: CleanStepView(scanResults: scanResults)
                 default: WelcomeStepView()
                 }
             }
