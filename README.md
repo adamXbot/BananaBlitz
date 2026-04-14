@@ -36,5 +36,16 @@ BananaBlitz uses XcodeGen to manage its project generation to avoid messy git co
 ## Permissions
 Due to the system-level protections imposed by macOS over the `~/Library/` directory for apps, BananaBlitz requires **Full Disk Access** and is built without App Sandbox enabled. The onboarding wizard will guide you to enable this!
 
+## Manually locking a file (The visual way)
+![manual](https://github.com/user-attachments/assets/e4b5a561-a46c-47f2-ad6a-c9db3b4f789d)
+1. Open textedit and create a file
+2. Remove the extension and ensure it is spelt **exactly** the same as the folder
+3. Delete the folder in your ~/Library folder
+4. Quickly drag the file across e.g. `Trial`
+5. Right click on the file and 'lock' it
+
+That's it
+
+
 ## License
 MIT
