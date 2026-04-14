@@ -1,11 +1,20 @@
-# BananaBlitz 🍌 shield
+# BananaBlitz 🍌
 
 BananaBlitz is a lightweight, stealthy native macOS utility that helps you reclaim your privacy by periodically cleaning up deep system telemetry databases, Siri intelligence metrics, and tracking logs within your `~/Library` folder.
 
-Instead of needing `sudo` or disabling System Integrity Protection (SIP), BananaBlitz uses macOS native constructs (`chflags`) to selectively neuter unwanted directories and stop Apple daemons from logging metrics, without risking breaking your OS!
+Instead of disabling System Integrity Protection (SIP), BananaBlitz uses macOS native constructs (`chflags`) to selectively neuter unwanted directories and stop Apple daemons from logging metrics, without risking breaking your OS.
 
 > [!CAUTION]
 > **Use at your own risk.** BananaBlitz modifies system-generated files and directories within your `~/Library` folder using aggressive locking mechanisms (`chflags`). While designed to be non-destructive, the developers are not responsible for any data loss, system instability, or unexpected behavior resulting from the use of this utility. Always ensure you have a recent backup of your data.
+
+##
+via brew `brew install adamxbot/tap/bananablitz`
+Or `brew tap adamxbot/tap` and then `brew install bananablitz`.
+
+Or via the [latest release](https://github.com/adamXbot/BananaBlitz/releases/latest)
+
+Note, you will need to remove app from quarantine as it isn't notarised. This can be done with
+`xattr -cr /Applications/BananaBlitz.app`
 
 ## Features
 - **3 Privacy Levels:** Select from Basic (caches), Strong (Biome intelligence), and Paranoid (screentime, Siri profiling).
