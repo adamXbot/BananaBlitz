@@ -1,11 +1,20 @@
-# BananaBlitz 🍌 shield
+# BananaBlitz 🍌
 
 BananaBlitz is a lightweight, stealthy native macOS utility that helps you reclaim your privacy by periodically cleaning up deep system telemetry databases, Siri intelligence metrics, and tracking logs within your `~/Library` folder.
 
-Instead of needing `sudo` or disabling System Integrity Protection (SIP), BananaBlitz uses macOS native constructs (`chflags`) to selectively neuter unwanted directories and stop Apple daemons from logging metrics, without risking breaking your OS!
+Instead of disabling System Integrity Protection (SIP), BananaBlitz uses macOS native constructs (`chflags`) to selectively neuter unwanted directories and stop Apple daemons from logging metrics, without risking breaking your OS.
 
 > [!CAUTION]
 > **Use at your own risk.** BananaBlitz modifies system-generated files and directories within your `~/Library` folder using aggressive locking mechanisms (`chflags`). While designed to be non-destructive, the developers are not responsible for any data loss, system instability, or unexpected behavior resulting from the use of this utility. Always ensure you have a recent backup of your data.
+
+##
+via brew `brew install adamxbot/tap/bananablitz`
+Or `brew tap adamxbot/tap` and then `brew install bananablitz`.
+
+Or via the [latest release](https://github.com/adamXbot/BananaBlitz/releases/latest)
+
+Note, you will need to remove app from quarantine as it isn't notarised. This can be done with
+`xattr -cr /Applications/BananaBlitz.app`
 
 ## Features
 - **3 Privacy Levels:** Select from Basic (caches), Strong (Biome intelligence), and Paranoid (screentime, Siri profiling).
@@ -37,6 +46,18 @@ If you need to revert the changes made by BananaBlitz, you can use the `unbrick.
 This will remove the immutable flag from the locked directories and files, and recreate them as normal directories and files.
 
 This may happen if you select the paranoid option.
+
+
+## Manually locking a file (The visual way)
+![manual](https://github.com/user-attachments/assets/e4b5a561-a46c-47f2-ad6a-c9db3b4f789d)
+1. Open textedit and create a file
+2. Remove the extension and ensure it is spelt **exactly** the same as the folder
+3. Delete the folder in your ~/Library folder
+4. Quickly drag the file across e.g. `Trial`
+5. Right click on the file and 'lock' it
+
+That's it
+
 
 ## License
 MIT
