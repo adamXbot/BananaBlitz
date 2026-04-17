@@ -59,19 +59,20 @@ class PrivacyCleaner {
 
         if target.isSpecificFile {
             if fileManager.fileExists(atPath: path) {
-                try fileManager.removeItem(atPath: path)
+                if FileSystemGuard.shared.isLocked(target) {
+                    try FileSystemGuard.shared.unlockTarget(target)
+                } else {
+                    try fileManager.removeItem(atPath: path)
+                }
             }
             return
         }
 
         guard fileManager.fileExists(atPath: path) else { return }
 
-        // Check if the path is a file (possibly locked by a previous replaceWithFile)
-        var isDir: ObjCBool = false
-        fileManager.fileExists(atPath: path, isDirectory: &isDir)
-        if !isDir.boolValue {
-            // It's a locked file from a previous lock — unlock first
+        if FileSystemGuard.shared.isLocked(target) {
             try FileSystemGuard.shared.unlockTarget(target)
+            return
         }
 
         let contents = try fileManager.contentsOfDirectory(atPath: path)
@@ -89,12 +90,21 @@ class PrivacyCleaner {
         if target.isSpecificFile {
             let ext = (path as NSString).pathExtension.lowercased()
             if dbExtensions.contains(ext) && fileManager.fileExists(atPath: path) {
-                try fileManager.removeItem(atPath: path)
+                if FileSystemGuard.shared.isLocked(target) {
+                    try FileSystemGuard.shared.unlockTarget(target)
+                } else {
+                    try fileManager.removeItem(atPath: path)
+                }
             }
             return
         }
 
         guard fileManager.fileExists(atPath: path) else { return }
+
+        if FileSystemGuard.shared.isLocked(target) {
+            try FileSystemGuard.shared.unlockTarget(target)
+            return
+        }
 
         guard let enumerator = fileManager.enumerator(atPath: path) else { return }
         while let file = enumerator.nextObject() as? String {

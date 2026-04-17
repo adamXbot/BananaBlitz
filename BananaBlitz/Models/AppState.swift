@@ -68,6 +68,7 @@ class AppState: ObservableObject {
     @AppStorage("launchAtLogin") var launchAtLogin: Bool = false
     @AppStorage("isPaused") var isPaused: Bool = false
     @AppStorage("showMenuBarStatus") var showMenuBarStatus: Bool = true
+    @AppStorage("enableKeyboardShortcut") var enableKeyboardShortcut: Bool = false
 
     // MARK: Published State
 

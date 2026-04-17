@@ -125,17 +125,6 @@ struct PrivacyTarget: Identifiable, Codable, Hashable {
             defaultStrategy: .wipeContents,
             isSpecificFile: false
         ),
-        PrivacyTarget(
-            id: "safari-caches",
-            name: "Safari Web Caches",
-            description: "Safari browser cache containing tracking scripts, website assets, and some local session data.",
-            path: "~/Library/Containers/com.apple.Safari/Data/Library/Caches",
-            level: .basic,
-            sideEffect: "Warning: May log you out of some browser websites",
-            supportedStrategies: [.wipeContents],
-            defaultStrategy: .wipeContents,
-            isSpecificFile: false
-        ),
     ]
 
     // MARK: - 🟡 Strong Targets
@@ -330,6 +319,17 @@ struct PrivacyTarget: Identifiable, Codable, Hashable {
             level: .paranoid,
             sideEffect: "Battery and app prediction models will rebuild",
             supportedStrategies: [.wipeContents, .replaceWithFile],
+            defaultStrategy: .wipeContents,
+            isSpecificFile: false
+        ),
+        PrivacyTarget(
+            id: "safari-caches",
+            name: "Safari Web Caches",
+            description: "Safari browser cache containing tracking scripts, website assets, and some local session data.",
+            path: "~/Library/Containers/com.apple.Safari/Data/Library/Caches",
+            level: .paranoid,
+            sideEffect: "Warning: May log you out of some browser websites",
+            supportedStrategies: [.wipeContents],
             defaultStrategy: .wipeContents,
             isSpecificFile: false
         ),

@@ -55,6 +55,7 @@ struct BananaBlitzApp: App {
             }
         }
         .menuBarExtraStyle(.window)
+        .keyboardShortcut(appState.enableKeyboardShortcut ? KeyboardShortcut("b", modifiers: [.command, .control]) : nil)
 
         // Settings window (opened from menu bar)
         Window("BananaBlitz Settings", id: "settings") {

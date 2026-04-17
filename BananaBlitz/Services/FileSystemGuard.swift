@@ -71,6 +71,14 @@ class FileSystemGuard {
             return true
         }
 
+        // For specific files, check the NSFileImmutable attribute
+        if target.isSpecificFile {
+            if let attrs = try? fileManager.attributesOfItem(atPath: path),
+               let isImmutable = attrs[.immutable] as? Bool {
+                return isImmutable
+            }
+        }
+
         return false
     }
 

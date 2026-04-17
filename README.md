@@ -22,6 +22,9 @@ Note, you will need to remove app from quarantine as it isn't notarised. This ca
 - **Smart Directory Locking:** Replace directories with immutable empty files to block intrusive re-creations natively using `uchg`.
 - **Menu Bar Ready:** Fully built for your menu bar, cleanly getting out of the way.
 
+## Keyboard Shortcut
+You can quickly open BananaBlitz from anywhere by pressing `Command` + `Control` + `b`. This feature is disabled by default. To enable it, open the app, go to Settings -> Preferences, and toggle "Menu Bar Global Shortcut (⌘⌃B)".
+
 ## Build Requirements
 - macOS 14.0+
 - Xcode 15+

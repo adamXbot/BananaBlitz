@@ -225,6 +225,11 @@ struct SettingsView: View {
                     get: { appState.showMenuBarStatus },
                     set: { appState.showMenuBarStatus = $0 }
                 ))
+                
+                Toggle("Menu Bar Global Shortcut (⌘⌃B)", isOn: Binding(
+                    get: { appState.enableKeyboardShortcut },
+                    set: { appState.enableKeyboardShortcut = $0 }
+                ))
             }
 
             Section("Permissions") {
