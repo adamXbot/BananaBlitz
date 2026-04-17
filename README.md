@@ -27,5 +27,16 @@ BananaBlitz uses XcodeGen to manage its project generation to avoid messy git co
 ## Permissions
 Due to the system-level protections imposed by macOS over the `~/Library/` directory for apps, BananaBlitz requires **Full Disk Access** and is built without App Sandbox enabled. The onboarding wizard will guide you to enable this!
 
+## Reverting
+If you need to revert the changes made by BananaBlitz, you can use the `unbrick.sh` script.
+
+```bash
+./unbrick.sh
+```
+
+This will remove the immutable flag from the locked directories and files, and recreate them as normal directories and files.
+
+This may happen if you select the paranoid option.
+
 ## License
 MIT
