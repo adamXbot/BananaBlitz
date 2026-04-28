@@ -159,7 +159,12 @@ class AppState: ObservableObject {
 
     // MARK: Init
 
-    init() {
+    /// `persistenceURL` is overridable for tests so each test can use a
+    /// unique temporary file and runs don't share state. Production callers
+    /// pass nothing — `AppState.defaultPersistenceURL` resolves to
+    /// `~/Library/Application Support/BananaBlitz/state.json`.
+    init(persistenceURL: URL? = AppState.defaultPersistenceURL) {
+        self.persistenceURL = persistenceURL
         loadPersistedData()
     }
 
@@ -236,7 +241,12 @@ class AppState: ObservableObject {
 
     // MARK: - Persistence (JSON file for complex data)
 
-    private var persistenceURL: URL? {
+    private let persistenceURL: URL?
+
+    /// Default production location: `~/Library/Application Support/BananaBlitz/state.json`.
+    /// Returns `nil` if Application Support can't be resolved or the directory
+    /// can't be created.
+    static var defaultPersistenceURL: URL? {
         guard let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first else {
             AppLog.state.error("Could not resolve Application Support directory")
             return nil

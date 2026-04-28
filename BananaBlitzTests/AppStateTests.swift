@@ -3,16 +3,61 @@ import XCTest
 
 final class AppStateTests: XCTestCase {
 
-    private let testSuiteName = "com.bananablitz.tests"
+    /// UserDefaults keys we touch from these tests. Cleared in setUp/tearDown
+    /// so each test starts from defaults regardless of run order.
+    private static let userDefaultsKeysToClear: [String] = [
+        StorageKey.hasCompletedOnboarding,
+        StorageKey.onboardingStep,
+        StorageKey.selectedLevelRaw,
+        StorageKey.scheduleIntervalRaw,
+        StorageKey.notificationStyleRaw,
+        StorageKey.launchAtLogin,
+        StorageKey.isPaused,
+        StorageKey.showMenuBarStatus,
+        StorageKey.enableKeyboardShortcut,
+        StorageKey.globalStrategyRaw,
+    ]
 
-    override func setUp() {
-        super.setUp()
-        // Use a clean UserDefaults domain so @AppStorage doesn't leak between tests.
-        UserDefaults().removePersistentDomain(forName: testSuiteName)
+    private var tempURL: URL!
+
+    override func setUpWithError() throws {
+        try super.setUpWithError()
+
+        // Unique JSON file per test so persisted history can't bleed between
+        // tests via the default Application Support location.
+        tempURL = URL(fileURLWithPath: NSTemporaryDirectory())
+            .appendingPathComponent("bananablitz-state-\(UUID().uuidString).json")
+
+        // Clear any UserDefaults state left by previous tests or by the real
+        // app running on this machine.
+        clearUserDefaults()
     }
 
+    override func tearDownWithError() throws {
+        if let url = tempURL, FileManager.default.fileExists(atPath: url.path) {
+            try? FileManager.default.removeItem(at: url)
+        }
+        tempURL = nil
+        clearUserDefaults()
+        try super.tearDownWithError()
+    }
+
+    private func clearUserDefaults() {
+        for key in Self.userDefaultsKeysToClear {
+            UserDefaults.standard.removeObject(forKey: key)
+        }
+    }
+
+    /// Convenience factory: every test gets an `AppState` whose JSON
+    /// persistence is isolated to its own temporary file.
+    private func makeState() -> AppState {
+        AppState(persistenceURL: tempURL)
+    }
+
+    // MARK: - Tests
+
     func test_setDefaultTargets_basic() {
-        let state = AppState()
+        let state = makeState()
         state.setDefaultTargets(for: .basic)
         XCTAssertEqual(state.enabledTargetIDs.count, PrivacyTarget.targets(for: .basic).count)
         XCTAssertTrue(state.enabledTargetIDs.contains("ad-privacy"))
@@ -20,13 +65,13 @@ final class AppStateTests: XCTestCase {
     }
 
     func test_setDefaultTargets_paranoidIncludesAll() {
-        let state = AppState()
+        let state = makeState()
         state.setDefaultTargets(for: .paranoid)
         XCTAssertEqual(state.enabledTargetIDs.count, PrivacyTarget.allTargets.count)
     }
 
     func test_toggleTarget_flipsMembership() {
-        let state = AppState()
+        let state = makeState()
         let target = PrivacyTarget.basicTargets[0]
 
         XCTAssertFalse(state.isTargetEnabled(target))
@@ -37,7 +82,7 @@ final class AppStateTests: XCTestCase {
     }
 
     func test_addResult_capsHistoryAt200() {
-        let state = AppState()
+        let state = makeState()
         for _ in 0..<250 {
             let result = CleaningResult(
                 targetID: "ad-privacy",
@@ -51,7 +96,7 @@ final class AppStateTests: XCTestCase {
     }
 
     func test_addResult_failureDoesNotIncrementTotalsOrLastDate() {
-        let state = AppState()
+        let state = makeState()
         state.addResult(CleaningResult(
             targetID: "ad-privacy",
             strategy: .wipeContents,
@@ -64,7 +109,7 @@ final class AppStateTests: XCTestCase {
     }
 
     func test_snapshotCleaningJobs_reflectsEnabledTargetsAndStrategies() {
-        let state = AppState()
+        let state = makeState()
         state.setDefaultTargets(for: .basic)
         let target = PrivacyTarget.basicTargets[0]
         state.setStrategy(.replaceWithFile, for: target)
@@ -77,7 +122,7 @@ final class AppStateTests: XCTestCase {
     }
 
     func test_resetAll_clearsState() {
-        let state = AppState()
+        let state = makeState()
         state.setDefaultTargets(for: .strong)
         state.totalBytesReclaimed = 12_345
         state.hasCompletedOnboarding = true
@@ -88,5 +133,24 @@ final class AppStateTests: XCTestCase {
         XCTAssertTrue(state.enabledTargetIDs.isEmpty)
         XCTAssertEqual(state.totalBytesReclaimed, 0)
         XCTAssertNil(state.lastCleanDate)
+    }
+
+    func test_persistence_roundTripsAcrossInstances() {
+        // Demonstrates the injection: persistedData written by one instance
+        // is visible to a fresh instance pointing at the same URL.
+        do {
+            let writer = makeState()
+            writer.setDefaultTargets(for: .basic)
+            writer.addResult(CleaningResult(
+                targetID: "ad-privacy",
+                strategy: .wipeContents,
+                bytesReclaimed: 4096,
+                success: true
+            ))
+        }
+        let reader = makeState()
+        XCTAssertTrue(reader.enabledTargetIDs.contains("ad-privacy"))
+        XCTAssertEqual(reader.totalBytesReclaimed, 4096)
+        XCTAssertNotNil(reader.lastCleanDate)
     }
 }
