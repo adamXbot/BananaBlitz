@@ -40,10 +40,10 @@ BananaBlitz uses XcodeGen to manage its project generation to avoid messy git co
 Due to the system-level protections imposed by macOS over the `~/Library/` directory for apps, BananaBlitz requires **Full Disk Access** and is built without App Sandbox enabled. The onboarding wizard will guide you to enable this!
 
 ## Reverting
-If you need to revert the changes made by BananaBlitz, you can use the `unbrick.sh` script.
+If you need to revert the changes made by BananaBlitz, run the bundled recovery script:
 
 ```bash
-./unbrick.sh
+./Scripts/unbrick.sh
 ```
 
 This will remove the immutable flag from the locked directories and files, and recreate them as normal directories and files.
@@ -51,6 +51,12 @@ This will remove the immutable flag from the locked directories and files, and r
 This may happen if you select the paranoid option.
 
 The script bundled in this repo is **auto-generated** from the canonical `PrivacyTarget.allTargets` registry. To regenerate it for your local target list, open the app and use **Settings → Preferences → Data → Save Recovery Script…**, or call `UnbrickScriptGenerator.write(to:)` directly.
+
+## Scripts
+All bundled scripts live in `Scripts/`:
+
+- `unbrick.sh` — recovery script that reverses every Lock-with-Immutable-File operation. Auto-generated from `PrivacyTarget.allTargets`.
+- `regenerate-app-icons.sh` — resizes a single source PNG into every slot in `AppIcon.appiconset` using the built-in `sips` tool.
 
 ## Tests
 A unit-test target lives in `BananaBlitzTests/`. After `xcodegen generate`, run:
