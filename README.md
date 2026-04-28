@@ -61,6 +61,31 @@ xcodebuild test -scheme BananaBlitz -destination 'platform=macOS'
 
 Tests cover the `PrivacyCleaner` strategies, `FileSystemGuard` lock/unlock round-trips, `AppState` persistence, and `unbrick.sh` generation. CI runs the same command on every push (`.github/workflows/ci.yml`).
 
+## Cutting a release
+Releases are driven by GitHub Actions.
+
+1. Run the **Release** workflow (`.github/workflows/release.yml`) from the Actions tab. Provide a `version` input like `1.1.0`.
+2. The workflow bumps `MARKETING_VERSION` and `CURRENT_PROJECT_VERSION` in `project.yml`, commits the change, and pushes a `v<version>` tag.
+3. The pushed tag triggers the `archive` job in `ci.yml`, which:
+   - Runs the test suite again.
+   - Imports your Developer ID certificate (if configured), archives with Hardened Runtime, and signs the app.
+   - Submits the signed bundle to Apple's notary service via `notarytool` (if configured) and staples the ticket.
+   - Zips the result, uploads it as a workflow artifact, and creates a **draft** GitHub release for you to review and publish.
+
+If signing or notarization secrets aren't set, the workflow still produces an unsigned `.zip` and drafts a release — the existing pre-1.0 behaviour. To enable full signing + notarization, add the following secrets to the repository (Settings → Secrets and variables → Actions):
+
+| Secret | Contents |
+| --- | --- |
+| `APPLE_DEVELOPER_CERT_BASE64` | `base64 -i DeveloperID.p12` of your Developer ID Application certificate |
+| `APPLE_DEVELOPER_CERT_PASSWORD` | The password used when exporting the `.p12` |
+| `APPLE_TEAM_ID` | 10-char Team ID from your Apple Developer account |
+| `KEYCHAIN_PASSWORD` | (optional) Password used for the temporary CI keychain |
+| `AC_API_KEY_BASE64` | `base64 -i AuthKey_XXXXXX.p8` from App Store Connect → Users and Access → Keys |
+| `AC_API_KEY_ID` | The 10-char Key ID shown next to the key |
+| `AC_API_ISSUER_ID` | Issuer ID from the same App Store Connect page |
+
+Once those are in place, every `v*` tag pushed (whether by `release.yml` or manually) produces a signed + notarized build ready to ship.
+
 ## Auto-updates (Sparkle)
 The app integrates [Sparkle](https://github.com/sparkle-project/Sparkle) but is dormant until you finish signing + notarizing the app, since Sparkle relies on the code signature to verify updates. To enable updates:
 
