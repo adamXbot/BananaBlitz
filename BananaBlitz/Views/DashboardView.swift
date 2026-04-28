@@ -6,6 +6,8 @@ struct DashboardView: View {
 
     var body: some View {
         VStack(spacing: 20) {
+            recentFailureBanner
+
             // Hero stat cards
             HStack(spacing: 16) {
                 statCard(
@@ -128,5 +130,50 @@ struct DashboardView: View {
         let formatter = RelativeDateTimeFormatter()
         formatter.unitsStyle = .abbreviated
         return formatter.localizedString(for: date, relativeTo: Date())
+    }
+
+    /// Banner visible when the most recent run had any failures.
+    /// Walks backwards through history until a successful run breaks the streak.
+    @ViewBuilder
+    private var recentFailureBanner: some View {
+        let recent = recentRunFailures()
+        if !recent.isEmpty {
+            HStack(alignment: .top, spacing: 10) {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .foregroundStyle(.orange)
+                    .font(.system(size: 14))
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Last clean had \(recent.count) failure\(recent.count == 1 ? "" : "s")")
+                        .font(.system(size: 12, weight: .semibold))
+                    Text(recent.prefix(3).map { $0.targetName }.joined(separator: ", ") +
+                         (recent.count > 3 ? ", and \(recent.count - 3) more" : ""))
+                        .font(.system(size: 11))
+                        .foregroundStyle(.secondary)
+                        .lineLimit(2)
+                }
+                Spacer()
+            }
+            .padding(12)
+            .background(
+                RoundedRectangle(cornerRadius: 10)
+                    .fill(Color.orange.opacity(0.1))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 10)
+                            .strokeBorder(Color.orange.opacity(0.4), lineWidth: 1)
+                    )
+            )
+        }
+    }
+
+    /// Failures from the most recent contiguous run. The history is ordered
+    /// most-recent-first; a run is the leading slice that shares the same
+    /// timestamp minute (close enough for "the last clean").
+    private func recentRunFailures() -> [CleaningResult] {
+        guard let mostRecent = appState.cleaningHistory.first else { return [] }
+        let window: TimeInterval = 60
+        let prefix = appState.cleaningHistory.prefix { result in
+            mostRecent.timestamp.timeIntervalSince(result.timestamp) <= window
+        }
+        return prefix.filter { !$0.success }
     }
 }

@@ -1,0 +1,104 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-test:
+    name: Build & Test
+    runs-on: macos-14
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode_15.4.app
+
+      - name: Show toolchain versions
+        run: |
+          xcodebuild -version
+          swift --version
+
+      - name: Install xcodegen
+        run: brew install xcodegen
+
+      - name: Generate Xcode project
+        run: xcodegen generate
+
+      - name: Build & test
+        run: |
+          set -o pipefail
+          xcodebuild test \
+            -scheme BananaBlitz \
+            -destination 'platform=macOS' \
+            -configuration Debug \
+            -resultBundlePath TestResults.xcresult \
+            CODE_SIGN_IDENTITY="-" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO \
+            | xcpretty || (xcodebuild -showdestinations -scheme BananaBlitz; exit 1)
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: TestResults.xcresult
+          retention-days: 7
+
+  archive:
+    name: Archive (release tags)
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build-and-test
+    runs-on: macos-14
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode_15.4.app
+
+      - name: Install xcodegen
+        run: brew install xcodegen
+
+      - name: Generate Xcode project
+        run: xcodegen generate
+
+      - name: Archive
+        run: |
+          xcodebuild archive \
+            -scheme BananaBlitz \
+            -configuration Release \
+            -archivePath build/BananaBlitz.xcarchive \
+            CODE_SIGN_IDENTITY="-" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO
+
+      - name: Export unsigned .app
+        run: |
+          mkdir -p build/export
+          cp -R build/BananaBlitz.xcarchive/Products/Applications/BananaBlitz.app build/export/
+          cd build/export
+          zip -ry BananaBlitz-unsigned.zip BananaBlitz.app
+
+      - name: Upload archive artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: BananaBlitz-unsigned
+          path: build/export/BananaBlitz-unsigned.zip
+          retention-days: 30
+
+      # Notarization / signing is intentionally not wired here.
+      # Add it once the project has a Developer ID + an APPLE_API_KEY secret;
+      # see notes in CONTRIBUTING.md for the exact recipe.

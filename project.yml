@@ -12,6 +12,11 @@ settings:
     SWIFT_VERSION: "5"
     DEAD_CODE_STRIPPING: YES
 
+packages:
+  Sparkle:
+    url: https://github.com/sparkle-project/Sparkle
+    from: 2.6.0
+
 targets:
   BananaBlitz:
     type: application
@@ -21,6 +26,8 @@ targets:
         excludes:
           - "Info.plist"
           - "BananaBlitz.entitlements"
+    dependencies:
+      - package: Sparkle
     settings:
       base:
         INFOPLIST_FILE: BananaBlitz/Info.plist
@@ -38,3 +45,29 @@ targets:
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         GENERATE_INFOPLIST_FILE: NO
         COMBINE_HIDPI_IMAGES: YES
+
+  BananaBlitzTests:
+    type: bundle.unit-test
+    platform: macOS
+    sources:
+      - path: BananaBlitzTests
+    dependencies:
+      - target: BananaBlitz
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.bananablitz.tests
+        MACOSX_DEPLOYMENT_TARGET: "14.0"
+        GENERATE_INFOPLIST_FILE: YES
+
+schemes:
+  BananaBlitz:
+    build:
+      targets:
+        BananaBlitz: all
+        BananaBlitzTests: [test]
+    test:
+      targets:
+        - BananaBlitzTests
+      gatherCoverageData: true
+    run:
+      config: Debug

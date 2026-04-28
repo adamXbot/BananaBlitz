@@ -2,10 +2,10 @@
 
 BananaBlitz is a lightweight, stealthy native macOS utility that helps you reclaim your privacy by periodically cleaning up deep system telemetry databases, Siri intelligence metrics, and tracking logs within your `~/Library` folder.
 
-Instead of disabling System Integrity Protection (SIP), BananaBlitz uses macOS native constructs (`chflags`) to selectively neuter unwanted directories and stop Apple daemons from logging metrics, without risking breaking your OS.
+Instead of disabling System Integrity Protection (SIP), BananaBlitz uses macOS native constructs (the user-immutable flag, equivalent to `chflags uchg`) to selectively neuter unwanted directories and stop Apple daemons from logging metrics, without risking breaking your OS.
 
 > [!CAUTION]
-> **Use at your own risk.** BananaBlitz modifies system-generated files and directories within your `~/Library` folder using aggressive locking mechanisms (`chflags`). While designed to be non-destructive, the developers are not responsible for any data loss, system instability, or unexpected behavior resulting from the use of this utility. Always ensure you have a recent backup of your data.
+> **Use at your own risk.** BananaBlitz modifies system-generated files and directories within your `~/Library` folder. The "Lock with Immutable File" strategy *is* destructive — it deletes the original directory and replaces it with a locked empty file — but the operation is reversible via the in-app "Save Recovery Script…" button (Settings → Preferences → Data) or the bundled `unbrick.sh`. The developers are not responsible for any data loss, system instability, or unexpected behavior resulting from the use of this utility. Always ensure you have a recent backup of your data.
 
 ##
 via brew `brew install adamxbot/tap/bananablitz`
@@ -49,6 +49,27 @@ If you need to revert the changes made by BananaBlitz, you can use the `unbrick.
 This will remove the immutable flag from the locked directories and files, and recreate them as normal directories and files.
 
 This may happen if you select the paranoid option.
+
+The script bundled in this repo is **auto-generated** from the canonical `PrivacyTarget.allTargets` registry. To regenerate it for your local target list, open the app and use **Settings → Preferences → Data → Save Recovery Script…**, or call `UnbrickScriptGenerator.write(to:)` directly.
+
+## Tests
+A unit-test target lives in `BananaBlitzTests/`. After `xcodegen generate`, run:
+
+```bash
+xcodebuild test -scheme BananaBlitz -destination 'platform=macOS'
+```
+
+Tests cover the `PrivacyCleaner` strategies, `FileSystemGuard` lock/unlock round-trips, `AppState` persistence, and `unbrick.sh` generation. CI runs the same command on every push (`.github/workflows/ci.yml`).
+
+## Auto-updates (Sparkle)
+The app integrates [Sparkle](https://github.com/sparkle-project/Sparkle) but is dormant until you finish signing + notarizing the app, since Sparkle relies on the code signature to verify updates. To enable updates:
+
+1. `brew install --cask sparkle` to get the helper tools.
+2. `generate_keys` — store the private key in the Keychain it prompts for, copy the public key into `Info.plist` under `SUPublicEDKey`.
+3. Pick a stable HTTPS URL for `appcast.xml`. Add it to `Info.plist` as `SUFeedURL`.
+4. After every release: `generate_appcast .` over your release artifacts directory and upload `appcast.xml` to the same host.
+
+Until `SUFeedURL` is populated, the "Check for Updates" button in the About panel is disabled — the rest of the app still works.
 
 
 ## Manually locking a file (The visual way)

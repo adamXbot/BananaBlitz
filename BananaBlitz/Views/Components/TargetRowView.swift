@@ -9,6 +9,7 @@ struct TargetRowView: View {
     let strategy: CleaningStrategy
     let onToggle: () -> Void
     let onStrategyChange: (CleaningStrategy) -> Void
+    var onVerify: (() -> Void)? = nil
 
     @State private var isExpanded = false
     @State private var isHovered = false
@@ -99,7 +100,7 @@ struct TargetRowView: View {
                             Text("Strategy:")
                                 .font(.system(size: 10))
                                 .foregroundStyle(.secondary)
-                            
+
                             Picker("", selection: Binding(
                                 get: { strategy },
                                 set: { onStrategyChange($0) }
@@ -121,6 +122,20 @@ struct TargetRowView: View {
                                 .font(.system(size: 10))
                                 .foregroundStyle(.secondary)
                         }
+                    }
+
+                    if let onVerify = onVerify {
+                        Button {
+                            onVerify()
+                        } label: {
+                            HStack(spacing: 4) {
+                                Image(systemName: "arrow.clockwise")
+                                Text("Verify state")
+                            }
+                            .font(.system(size: 10))
+                        }
+                        .buttonStyle(.plain)
+                        .foregroundStyle(.secondary)
                     }
                 }
                 .padding(.horizontal, 48)

@@ -17,10 +17,12 @@ struct LevelBadge: View {
                 Capsule()
                     .strokeBorder(level.color.opacity(0.3), lineWidth: 0.5)
             )
+            .accessibilityLabel("\(level.displayName) cleaning level")
     }
 }
 
-/// A small dot indicator for status display.
+/// A small dot indicator for status display. Decorative — VoiceOver should
+/// read the surrounding text rather than describing the dot.
 struct StatusDot: View {
     let color: Color
     var size: CGFloat = 8
@@ -30,6 +32,7 @@ struct StatusDot: View {
             .fill(color)
             .frame(width: size, height: size)
             .shadow(color: color.opacity(0.5), radius: 3)
+            .accessibilityHidden(true)
     }
 }
 

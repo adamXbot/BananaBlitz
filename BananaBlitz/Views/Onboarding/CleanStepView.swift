@@ -93,10 +93,7 @@ struct CleanStepView: View {
                         RoundedRectangle(cornerRadius: 4)
                             .fill(
                                 LinearGradient(
-                                    colors: [
-                                        Color(hue: 0.14, saturation: 0.85, brightness: 0.95),
-                                        Color(hue: 0.10, saturation: 0.8, brightness: 0.90)
-                                    ],
+                                    colors: [.bananaGold, .bananaGoldDark],
                                     startPoint: .leading,
                                     endPoint: .trailing
                                 )
@@ -176,22 +173,24 @@ struct CleanStepView: View {
 
     private func startCleaning() {
         isCleaning = true
-        let targets = appState.enabledTargets
+
+        // Snapshot the workload on the main thread so the background task
+        // never reads `@Published` state.
+        let jobs = appState.snapshotCleaningJobs()
 
         DispatchQueue.global(qos: .userInitiated).async {
             var allResults: [CleaningResult] = []
 
-            for (index, target) in targets.enumerated() {
+            for (index, job) in jobs.enumerated() {
                 DispatchQueue.main.async {
                     withAnimation {
-                        currentTarget = target.name
-                        progress = Double(index) / Double(targets.count)
+                        currentTarget = job.target.name
+                        progress = Double(index) / Double(jobs.count)
                         cleanedCount = index
                     }
                 }
 
-                let strategy = appState.strategyFor(target)
-                let result = PrivacyCleaner.shared.clean(target: target, strategy: strategy)
+                let result = PrivacyCleaner.shared.clean(target: job.target, strategy: job.strategy)
                 allResults.append(result)
 
                 // Small delay for visual feedback
@@ -202,7 +201,7 @@ struct CleanStepView: View {
                 withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
                     results = allResults
                     totalReclaimed = allResults.reduce(0) { $0 + $1.bytesReclaimed }
-                    cleanedCount = targets.count
+                    cleanedCount = jobs.count
                     progress = 1.0
                     isCleaning = false
                     isComplete = true

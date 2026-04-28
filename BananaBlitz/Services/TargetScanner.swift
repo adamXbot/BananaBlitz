@@ -1,7 +1,17 @@
 import Foundation
 
+/// A pre-computed snapshot of every target's size + lock state.
+/// View code reads from `AppState.scanResults` / `AppState.lockStates`,
+/// which are populated from this in one publish.
+struct ScanSummary {
+    var sizes: [String: Int64]
+    var lockStates: [String: Bool]
+
+    static let empty = ScanSummary(sizes: [:], lockStates: [:])
+}
+
 /// Scans privacy targets on disk to determine their existence, size, and lock status.
-class TargetScanner {
+final class TargetScanner {
     static let shared = TargetScanner()
 
     private let fileManager = FileManager.default
@@ -15,6 +25,17 @@ class TargetScanner {
             results[target.id] = targetSize(target)
         }
         return results
+    }
+
+    /// Scan all targets and return both sizes and lock states. Run off-main.
+    func summariseAll() -> ScanSummary {
+        var sizes: [String: Int64] = [:]
+        var locks: [String: Bool] = [:]
+        for target in PrivacyTarget.allTargets {
+            sizes[target.id] = targetSize(target)
+            locks[target.id] = FileSystemGuard.shared.isLocked(target)
+        }
+        return ScanSummary(sizes: sizes, lockStates: locks)
     }
 
     /// Scan targets in a specific level.
@@ -46,6 +67,7 @@ class TargetScanner {
     }
 
     /// Check if a target is currently locked (replaced with immutable file).
+    /// Hits the filesystem — prefer `AppState.lockStates[target.id]` from view code.
     func isLocked(_ target: PrivacyTarget) -> Bool {
         FileSystemGuard.shared.isLocked(target)
     }
@@ -57,7 +79,7 @@ class TargetScanner {
         guard let enumerator = fileManager.enumerator(atPath: path) else { return 0 }
 
         var count = 0
-        while let _ = enumerator.nextObject() as? String {
+        while enumerator.nextObject() != nil {
             count += 1
         }
         return count
@@ -66,24 +88,33 @@ class TargetScanner {
     // MARK: - Helpers
 
     /// Recursively calculate the size of a directory.
+    /// Skips symbolic links to avoid following them out of the target tree.
     private func directorySize(path: String) -> Int64 {
         var isDir: ObjCBool = false
         guard fileManager.fileExists(atPath: path, isDirectory: &isDir), isDir.boolValue else {
-            // If it's a file (possibly a lock file), return its size
+            // If it's a file (possibly a lock file), return its size.
             if let attrs = try? fileManager.attributesOfItem(atPath: path) {
                 return (attrs[.size] as? Int64) ?? 0
             }
             return 0
         }
 
-        guard let enumerator = fileManager.enumerator(atPath: path) else { return 0 }
+        let url = URL(fileURLWithPath: path)
+        let keys: [URLResourceKey] = [.fileSizeKey, .isSymbolicLinkKey, .isRegularFileKey]
+        guard let enumerator = fileManager.enumerator(
+            at: url,
+            includingPropertiesForKeys: keys,
+            options: [.skipsHiddenFiles, .skipsPackageDescendants]
+        ) else { return 0 }
 
         var totalSize: Int64 = 0
-        while let file = enumerator.nextObject() as? String {
-            let fullPath = (path as NSString).appendingPathComponent(file)
-            if let attrs = try? fileManager.attributesOfItem(atPath: fullPath),
-               let size = attrs[.size] as? Int64 {
-                totalSize += size
+        for case let fileURL as URL in enumerator {
+            do {
+                let values = try fileURL.resourceValues(forKeys: Set(keys))
+                if values.isSymbolicLink == true { continue }
+                if let size = values.fileSize { totalSize += Int64(size) }
+            } catch {
+                continue
             }
         }
         return totalSize

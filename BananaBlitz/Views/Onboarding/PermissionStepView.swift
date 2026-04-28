@@ -2,6 +2,7 @@ import SwiftUI
 
 /// Step 2: Guide the user to grant Full Disk Access.
 struct PermissionStepView: View {
+    @EnvironmentObject var appState: AppState
     @State private var hasAccess = false
     @State private var checkTimer: Timer?
 
@@ -105,6 +106,7 @@ struct PermissionStepView: View {
 
     private func startPolling() {
         hasAccess = PermissionChecker.shared.hasFullDiskAccess()
+        appState.fullDiskAccessGranted = hasAccess
         guard !hasAccess else { return }
 
         checkTimer = Timer.scheduledTimer(withTimeInterval: 2, repeats: true) { _ in
@@ -113,6 +115,7 @@ struct PermissionStepView: View {
                 withAnimation(.easeInOut(duration: 0.3)) {
                     hasAccess = access
                 }
+                appState.fullDiskAccessGranted = access
                 if access { stopPolling() }
             }
         }

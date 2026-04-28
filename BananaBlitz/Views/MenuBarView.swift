@@ -168,10 +168,10 @@ struct MenuBarView: View {
     // MARK: - Footer
 
     private var footerSection: some View {
-        HStack {
+        HStack(spacing: 12) {
             Button {
-                NSApplication.shared.activate(ignoringOtherApps: true)
                 openWindow(id: "settings")
+                AppActivator.shared.bringWindowForward(titled: "BananaBlitz Settings")
             } label: {
                 HStack(spacing: 4) {
                     Image(systemName: "gear")
@@ -179,6 +179,16 @@ struct MenuBarView: View {
                     Text("Settings")
                         .font(.system(size: 11))
                 }
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(.secondary)
+
+            Button {
+                openWindow(id: "about")
+                AppActivator.shared.bringWindowForward(titled: "About BananaBlitz")
+            } label: {
+                Text("About")
+                    .font(.system(size: 11))
             }
             .buttonStyle(.plain)
             .foregroundStyle(.secondary)
@@ -209,6 +219,7 @@ struct MenuBarView: View {
 
             CleanButton(title: "Get Started", icon: "arrow.right") {
                 openWindow(id: "onboarding")
+                AppActivator.shared.bringWindowForward(titled: "Welcome to BananaBlitz")
             }
         }
         .padding(20)

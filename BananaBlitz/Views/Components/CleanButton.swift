@@ -17,7 +17,7 @@ struct CleanButton: View {
 
     private var backgroundColor: Color {
         switch style {
-        case .primary:     return Color(hue: 0.14, saturation: 0.85, brightness: 0.95)  // banana gold
+        case .primary:     return Color.bananaGold
         case .secondary:   return Color(.controlBackgroundColor)
         case .destructive: return .red
         }
@@ -62,8 +62,16 @@ struct CleanButton: View {
             )
             .foregroundStyle(foregroundColor)
             .scaleEffect(isPressed ? 0.97 : 1.0)
+            .animation(.easeOut(duration: 0.12), value: isPressed)
         }
         .buttonStyle(.plain)
+        // Drive isPressed off a zero-distance drag so the bounce + scale
+        // animations fire on press / release.
+        .simultaneousGesture(
+            DragGesture(minimumDistance: 0)
+                .onChanged { _ in if !isPressed { isPressed = true } }
+                .onEnded { _ in isPressed = false }
+        )
         .onHover { hovering in
             withAnimation(.easeInOut(duration: 0.2)) {
                 isHovered = hovering

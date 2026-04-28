@@ -38,7 +38,7 @@ struct SnapshotStepView: View {
                         .font(.system(size: 20, weight: .bold, design: .rounded))
                 }
                 
-                Text("Creating an APFS snapshot allows you to revert your system state if anything goes wrong during cleaning.")
+                Text("Creating a Time Machine local snapshot lets you restore individual files via Time Machine if cleaning has unexpected effects. It is not a one-click bootable rollback.")
                     .font(.system(size: 13))
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)

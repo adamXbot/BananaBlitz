@@ -6,7 +6,12 @@ struct OnboardingContainerView: View {
     @EnvironmentObject var scheduler: SchedulerService
     @Environment(\.dismiss) private var dismiss
 
-    @State private var currentStep = 0
+    /// Persisted across launches so quitting mid-onboarding (e.g. to grant
+    /// Full Disk Access in System Settings, which often requires a relaunch)
+    /// drops the user back on the same step. Cleared on completion and on
+    /// `AppState.resetAll()`.
+    @AppStorage(StorageKey.onboardingStep) private var currentStep: Int = 0
+
     @State private var scanResults: [String: Int64] = [:]
     @State private var isScanning = false
 
@@ -49,6 +54,7 @@ struct OnboardingContainerView: View {
                 endPoint: .bottom
             )
         )
+        .onAppear { resumeIfNeeded() }
     }
 
     // MARK: - Progress Bar
@@ -62,10 +68,7 @@ struct OnboardingContainerView: View {
                 Rectangle()
                     .fill(
                         LinearGradient(
-                            colors: [
-                                Color(hue: 0.14, saturation: 0.85, brightness: 0.95),
-                                Color(hue: 0.10, saturation: 0.8, brightness: 0.90)
-                            ],
+                            colors: [.bananaGold, .bananaGoldDark],
                             startPoint: .leading,
                             endPoint: .trailing
                         )
@@ -116,7 +119,7 @@ struct OnboardingContainerView: View {
                     .padding(.vertical, 8)
                     .background(
                         RoundedRectangle(cornerRadius: 8)
-                            .fill(Color(hue: 0.14, saturation: 0.85, brightness: 0.95))
+                            .fill(Color.bananaGold)
                     )
                     .foregroundStyle(.black)
                 }
@@ -155,7 +158,7 @@ struct OnboardingContainerView: View {
 
     private var canProceed: Bool {
         switch currentStep {
-        case 1: return PermissionChecker.shared.hasFullDiskAccess()
+        case 1: return appState.fullDiskAccessGranted
         case 2: return !isScanning
         default: return true
         }
@@ -163,7 +166,7 @@ struct OnboardingContainerView: View {
 
     private var nextButtonTitle: String {
         switch currentStep {
-        case 1: return PermissionChecker.shared.hasFullDiskAccess() ? "Continue" : "Waiting..."
+        case 1: return appState.fullDiskAccessGranted ? "Continue" : "Waiting..."
         case 2: return isScanning ? "Scanning..." : "Continue"
         default: return "Continue"
         }
@@ -181,11 +184,11 @@ struct OnboardingContainerView: View {
 
     private func startScan() {
         isScanning = true
-        DispatchQueue.global(qos: .userInitiated).async {
-            let results = TargetScanner.shared.scanAll()
-            DispatchQueue.main.async {
-                scanResults = results
-                appState.scanResults = results
+        Task.detached(priority: .userInitiated) {
+            let summary = TargetScanner.shared.summariseAll()
+            await MainActor.run {
+                scanResults = summary.sizes
+                appState.applyScanSummary(summary)
                 isScanning = false
             }
         }
@@ -193,7 +196,23 @@ struct OnboardingContainerView: View {
 
     private func finishOnboarding() {
         appState.hasCompletedOnboarding = true
+        // Reset wizard state so a future Reset All Settings starts on step 0.
+        currentStep = 0
         scheduler.configure(with: appState)
         dismiss()
+    }
+
+    /// Called from `.onAppear`. Handles two cases:
+    ///   1. Persisted step is out of valid range — clamp to a safe value.
+    ///   2. User resumed on the scan step (2) but the in-memory `scanResults`
+    ///      is empty (because that's `@State` and got wiped on relaunch).
+    ///      Re-run the scan so the user isn't stuck on an empty screen.
+    private func resumeIfNeeded() {
+        if currentStep < 0 || currentStep >= totalSteps {
+            currentStep = 0
+        }
+        if currentStep == 2 && scanResults.isEmpty && !isScanning {
+            startScan()
+        }
     }
 }

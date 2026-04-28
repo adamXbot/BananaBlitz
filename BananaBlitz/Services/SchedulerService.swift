@@ -1,15 +1,34 @@
 import Foundation
 import UserNotifications
+import AppKit
 import SwiftUI
 
 /// Manages periodic automated cleaning based on user-configured schedule.
-class SchedulerService: ObservableObject {
+///
+/// Hardened against three real-world failure modes the Timer-only version had:
+///   1. Sleep — `Timer.scheduledTimer` doesn't fire while the Mac is asleep.
+///      We re-check on `NSWorkspace.didWakeNotification`.
+///   2. Relaunch — if the app quits or restarts after the scheduled fire,
+///      `lastCleanDate` is compared against `Date()` on `configure(with:)`
+///      and an immediate catch-up clean runs if overdue.
+///   3. Paused-mid-fire — `performScheduledClean` re-checks `isPaused` at
+///      fire time, in case the user paused between schedule and timer fire.
+final class SchedulerService: ObservableObject {
     @Published var nextCleanDate: Date?
     @Published var isActive: Bool = false
 
     private var timer: Timer?
     private weak var appState: AppState?
     private let cleaner = PrivacyCleaner.shared
+    private let log = AppLog.scheduler
+
+    private var wakeObserver: NSObjectProtocol?
+
+    deinit {
+        if let observer = wakeObserver {
+            NSWorkspace.shared.notificationCenter.removeObserver(observer)
+        }
+    }
 
     // MARK: - Configuration
 
@@ -17,6 +36,8 @@ class SchedulerService: ObservableObject {
     func configure(with state: AppState) {
         self.appState = state
         requestNotificationPermission()
+        installWakeObserver()
+        catchUpIfOverdue()
         updateSchedule()
     }
 
@@ -41,9 +62,12 @@ class SchedulerService: ObservableObject {
         isActive = true
         nextCleanDate = Date().addingTimeInterval(interval.rawValue)
 
-        timer = Timer.scheduledTimer(withTimeInterval: interval.rawValue, repeats: true) { [weak self] _ in
+        let scheduled = Timer.scheduledTimer(withTimeInterval: interval.rawValue, repeats: true) { [weak self] _ in
             self?.performScheduledClean()
         }
+        // Allow the timer to fire even while the run loop is in tracking mode.
+        RunLoop.main.add(scheduled, forMode: .common)
+        timer = scheduled
     }
 
     /// Stop all scheduled cleaning.
@@ -54,20 +78,62 @@ class SchedulerService: ObservableObject {
         nextCleanDate = nil
     }
 
+    // MARK: - Catch-up
+
+    /// If a scheduled fire was missed (sleep, relaunch, etc.), run immediately.
+    private func catchUpIfOverdue() {
+        guard let state = appState, !state.isPaused else { return }
+        let interval = state.scheduleInterval.rawValue
+        guard interval > 0 else { return }
+
+        let last = state.lastCleanDate ?? .distantPast
+        let elapsed = Date().timeIntervalSince(last)
+        guard elapsed >= interval else { return }
+
+        log.info("Catch-up clean: last=\(last, privacy: .public), elapsed=\(elapsed)s, interval=\(interval)s")
+        performScheduledClean()
+    }
+
+    // MARK: - Wake Observer
+
+    private func installWakeObserver() {
+        guard wakeObserver == nil else { return }
+        wakeObserver = NSWorkspace.shared.notificationCenter.addObserver(
+            forName: NSWorkspace.didWakeNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            self?.log.debug("System woke — re-checking schedule")
+            self?.catchUpIfOverdue()
+            self?.updateSchedule()
+        }
+    }
+
     // MARK: - Cleaning
 
     /// Execute a scheduled clean of all enabled targets.
+    /// Called on the main thread (from the run-loop timer).
     func performScheduledClean() {
         guard let state = appState else { return }
-
-        DispatchQueue.main.async {
-            state.isCurrentlyCleaning = true
+        // Re-check pause state at fire time — user may have paused after the
+        // timer was scheduled.
+        guard !state.isPaused else {
+            log.debug("Scheduled fire skipped: paused")
+            return
         }
+
+        // Snapshot the workload on the main thread before going to background.
+        let jobs = state.snapshotCleaningJobs()
+        guard !jobs.isEmpty else {
+            log.debug("Scheduled fire skipped: no enabled targets")
+            return
+        }
+
+        state.isCurrentlyCleaning = true
 
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             guard let self = self else { return }
-
-            let results = self.cleaner.cleanAll(state: state)
+            let results = self.cleaner.cleanAll(jobs: jobs)
 
             DispatchQueue.main.async {
                 for result in results {
@@ -76,8 +142,13 @@ class SchedulerService: ObservableObject {
                 state.isCurrentlyCleaning = false
                 self.nextCleanDate = Date().addingTimeInterval(state.scheduleInterval.rawValue)
 
-                // Send notification
-                if state.notificationStyle != .silent {
+                let failures = results.filter { !$0.success }
+                if !failures.isEmpty {
+                    // Even in `.silent` mode, surface failures — silent
+                    // success is fine, but silent failure for a privacy
+                    // tool is worse than an unwanted notification.
+                    self.sendFailureNotification(failures: failures)
+                } else if state.notificationStyle != .silent {
                     self.sendCleanNotification(results: results, state: state)
                 }
             }
@@ -86,16 +157,23 @@ class SchedulerService: ObservableObject {
 
     /// Execute a manual "Blitz Now" clean.
     func performManualClean(completion: @escaping ([CleaningResult]) -> Void) {
-        guard let state = appState else { return }
-
-        DispatchQueue.main.async {
-            state.isCurrentlyCleaning = true
+        guard let state = appState else {
+            completion([])
+            return
         }
+
+        // Snapshot on main before dispatching.
+        let jobs = state.snapshotCleaningJobs()
+        guard !jobs.isEmpty else {
+            completion([])
+            return
+        }
+
+        state.isCurrentlyCleaning = true
 
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             guard let self = self else { return }
-
-            let results = self.cleaner.cleanAll(state: state)
+            let results = self.cleaner.cleanAll(jobs: jobs)
 
             DispatchQueue.main.async {
                 for result in results {
@@ -103,8 +181,7 @@ class SchedulerService: ObservableObject {
                 }
                 state.isCurrentlyCleaning = false
 
-                // Reset next clean timer
-                if self.isActive, let state = self.appState {
+                if self.isActive {
                     self.nextCleanDate = Date().addingTimeInterval(state.scheduleInterval.rawValue)
                 }
 
@@ -116,7 +193,11 @@ class SchedulerService: ObservableObject {
     // MARK: - Notifications
 
     private func requestNotificationPermission() {
-        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { _, _ in }
+        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { [weak self] _, error in
+            if let error = error {
+                self?.log.error("Notification authorisation failed: \(error.localizedDescription, privacy: .public)")
+            }
+        }
     }
 
     private func sendCleanNotification(results: [CleaningResult], state: AppState) {
@@ -151,7 +232,34 @@ class SchedulerService: ObservableObject {
             content: content,
             trigger: nil
         )
-        UNUserNotificationCenter.current().add(request)
+        UNUserNotificationCenter.current().add(request) { [weak self] error in
+            if let error = error {
+                self?.log.error("Failed to deliver notification: \(error.localizedDescription, privacy: .public)")
+            }
+        }
+    }
+
+    /// Always-on alert when a scheduled clean has at least one failure.
+    /// Bypasses `notificationStyle` — silent failure is unacceptable for a
+    /// privacy tool the user trusts to keep things empty.
+    private func sendFailureNotification(failures: [CleaningResult]) {
+        let content = UNMutableNotificationContent()
+        content.title = "🍌 BananaBlitz — clean failed"
+        content.sound = .default
+        let names = failures.prefix(3).map { $0.targetName }.joined(separator: ", ")
+        let suffix = failures.count > 3 ? " and \(failures.count - 3) more" : ""
+        content.body = "Could not clean: \(names)\(suffix). Open BananaBlitz to investigate."
+
+        let request = UNNotificationRequest(
+            identifier: "bananablitz.failure.\(UUID().uuidString)",
+            content: content,
+            trigger: nil
+        )
+        UNUserNotificationCenter.current().add(request) { [weak self] error in
+            if let error = error {
+                self?.log.error("Failed to deliver failure notification: \(error.localizedDescription, privacy: .public)")
+            }
+        }
     }
 
     // MARK: - Time Formatting

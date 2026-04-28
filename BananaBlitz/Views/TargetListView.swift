@@ -81,16 +81,18 @@ struct TargetListView: View {
             .padding(.horizontal, 16)
             .padding(.vertical, 8)
 
-            // Target rows
+            // Target rows. Lock state is read from AppState's cache so we
+            // never hit the filesystem inside a view body.
             ForEach(targets) { target in
                 TargetRowView(
                     target: target,
                     size: appState.scanResults[target.id] ?? 0,
                     isEnabled: appState.isTargetEnabled(target),
-                    isLocked: TargetScanner.shared.isLocked(target),
+                    isLocked: appState.lockStates[target.id] ?? false,
                     strategy: appState.strategyFor(target),
                     onToggle: { appState.toggleTarget(target) },
-                    onStrategyChange: { appState.setStrategy($0, for: target) }
+                    onStrategyChange: { appState.setStrategy($0, for: target) },
+                    onVerify: { verify(target) }
                 )
                 .padding(.horizontal, 8)
             }
@@ -152,6 +154,18 @@ struct TargetListView: View {
                 appState.toggleTarget(target)
             } else if !enable && appState.isTargetEnabled(target) {
                 appState.toggleTarget(target)
+            }
+        }
+    }
+
+    /// Refresh the cached size + lock state for a single target.
+    private func verify(_ target: PrivacyTarget) {
+        Task.detached(priority: .userInitiated) {
+            let size = TargetScanner.shared.targetSize(target)
+            let locked = TargetScanner.shared.isLocked(target)
+            await MainActor.run {
+                appState.scanResults[target.id] = size
+                appState.lockStates[target.id] = locked
             }
         }
     }

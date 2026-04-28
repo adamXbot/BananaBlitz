@@ -60,7 +60,8 @@ struct ScheduleStepView: View {
                         .fill(Color(.controlBackgroundColor).opacity(0.5))
                 )
 
-                // Launch at Login
+                // Launch at Login. The toggle reflects whatever the user
+                // chooses — we never silently flip it on for them.
                 VStack(alignment: .leading, spacing: 6) {
                     Toggle(isOn: Binding(
                         get: { appState.launchAtLogin },
@@ -73,7 +74,7 @@ struct ScheduleStepView: View {
                                     try SMAppService.mainApp.unregister()
                                 }
                             } catch {
-                                print("Failed to update login item: \(error)")
+                                AppLog.loginItem.error("Failed to update login item: \(error.localizedDescription, privacy: .public)")
                             }
                         }
                     )) {
@@ -98,12 +99,5 @@ struct ScheduleStepView: View {
             Spacer()
         }
         .padding(24)
-        .onAppear {
-            // Default config on appear if not set
-            if !appState.launchAtLogin {
-                appState.launchAtLogin = true
-                try? SMAppService.mainApp.register()
-            }
-        }
     }
 }

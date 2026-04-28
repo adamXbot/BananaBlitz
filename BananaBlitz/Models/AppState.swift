@@ -53,6 +53,22 @@ enum ScheduleInterval: Double, CaseIterable, Codable, Identifiable {
     }
 }
 
+// MARK: - Storage Keys
+
+/// Centralised AppStorage keys to avoid drift on rename.
+enum StorageKey {
+    static let hasCompletedOnboarding = "hasCompletedOnboarding"
+    static let onboardingStep         = "onboardingStep"
+    static let selectedLevelRaw       = "selectedLevelRaw"
+    static let scheduleIntervalRaw    = "scheduleIntervalRaw"
+    static let notificationStyleRaw   = "notificationStyleRaw"
+    static let launchAtLogin          = "launchAtLogin"
+    static let isPaused               = "isPaused"
+    static let showMenuBarStatus      = "showMenuBarStatus"
+    static let enableKeyboardShortcut = "enableKeyboardShortcut"
+    static let globalStrategyRaw      = "globalStrategyRaw"
+}
+
 // MARK: - App State
 
 /// Central observable state for the entire application.
@@ -61,14 +77,15 @@ class AppState: ObservableObject {
 
     // MARK: Simple Preferences (AppStorage)
 
-    @AppStorage("hasCompletedOnboarding") var hasCompletedOnboarding: Bool = false
-    @AppStorage("selectedLevelRaw") var selectedLevelRaw: String = CleaningLevel.strong.rawValue
-    @AppStorage("scheduleIntervalRaw") var scheduleIntervalRaw: Double = ScheduleInterval.fourHours.rawValue
-    @AppStorage("notificationStyleRaw") var notificationStyleRaw: String = NotificationStyle.summary.rawValue
-    @AppStorage("launchAtLogin") var launchAtLogin: Bool = false
-    @AppStorage("isPaused") var isPaused: Bool = false
-    @AppStorage("showMenuBarStatus") var showMenuBarStatus: Bool = true
-    @AppStorage("enableKeyboardShortcut") var enableKeyboardShortcut: Bool = false
+    @AppStorage(StorageKey.hasCompletedOnboarding) var hasCompletedOnboarding: Bool = false
+    @AppStorage(StorageKey.selectedLevelRaw)       var selectedLevelRaw: String = CleaningLevel.strong.rawValue
+    @AppStorage(StorageKey.scheduleIntervalRaw)    var scheduleIntervalRaw: Double = ScheduleInterval.fourHours.rawValue
+    @AppStorage(StorageKey.notificationStyleRaw)   var notificationStyleRaw: String = NotificationStyle.summary.rawValue
+    @AppStorage(StorageKey.launchAtLogin)          var launchAtLogin: Bool = false
+    @AppStorage(StorageKey.isPaused)               var isPaused: Bool = false
+    @AppStorage(StorageKey.showMenuBarStatus)      var showMenuBarStatus: Bool = true
+    @AppStorage(StorageKey.enableKeyboardShortcut) var enableKeyboardShortcut: Bool = false
+    @AppStorage(StorageKey.globalStrategyRaw)      var globalStrategyRaw: String = CleaningStrategy.wipeContents.rawValue
 
     // MARK: Published State
 
@@ -78,47 +95,47 @@ class AppState: ObservableObject {
     @Published var lastCleanDate: Date?
     @Published var isCurrentlyCleaning: Bool = false
     @Published var totalBytesReclaimed: Int64 = 0
-    @Published var scanResults: [String: Int64] = [:]  // targetID → bytes on disk
+
+    /// Cached scan results — `targetID → bytes on disk`. Refreshed by the
+    /// scheduler bootstrap and onboarding. Read freely from view bodies.
+    @Published var scanResults: [String: Int64] = [:]
+
+    /// Cached lock states — `targetID → isLocked`. Refreshed alongside
+    /// `scanResults` so view bodies don't have to hit the filesystem.
+    @Published var lockStates: [String: Bool] = [:]
+
+    /// Cached Full Disk Access status. Refreshed via a `.task` poller in views
+    /// that need it; never call `PermissionChecker.hasFullDiskAccess()` from
+    /// inside a view body.
+    @Published var fullDiskAccessGranted: Bool = false
 
     // MARK: Computed Accessors
 
+    /// `@AppStorage` already publishes on write — no manual `objectWillChange`
+    /// dance is required here.
     var selectedLevel: CleaningLevel {
         get { CleaningLevel(rawValue: selectedLevelRaw) ?? .strong }
-        set {
-            selectedLevelRaw = newValue.rawValue
-            objectWillChange.send()
-        }
+        set { selectedLevelRaw = newValue.rawValue }
     }
 
     var scheduleInterval: ScheduleInterval {
         get { ScheduleInterval(rawValue: scheduleIntervalRaw) ?? .fourHours }
-        set {
-            scheduleIntervalRaw = newValue.rawValue
-            objectWillChange.send()
-        }
+        set { scheduleIntervalRaw = newValue.rawValue }
     }
 
     var notificationStyle: NotificationStyle {
         get { NotificationStyle(rawValue: notificationStyleRaw) ?? .summary }
-        set {
-            notificationStyleRaw = newValue.rawValue
-            objectWillChange.send()
-        }
+        set { notificationStyleRaw = newValue.rawValue }
     }
-
-    @AppStorage("globalStrategyRaw") var globalStrategyRaw: String = CleaningStrategy.wipeContents.rawValue
 
     var globalStrategy: CleaningStrategy {
         get { CleaningStrategy(rawValue: globalStrategyRaw) ?? .wipeContents }
         set {
             globalStrategyRaw = newValue.rawValue
-            for target in PrivacyTarget.allTargets {
-                if target.supportedStrategies.contains(newValue) {
-                    targetStrategies[target.id] = newValue
-                }
+            for target in PrivacyTarget.allTargets where target.supportedStrategies.contains(newValue) {
+                targetStrategies[target.id] = newValue
             }
             savePersistedData()
-            objectWillChange.send()
         }
     }
 
@@ -153,10 +170,8 @@ class AppState: ObservableObject {
         let targets = PrivacyTarget.targets(for: level)
         enabledTargetIDs = Set(targets.map(\.id))
 
-        for target in PrivacyTarget.allTargets {
-            if targetStrategies[target.id] == nil {
-                targetStrategies[target.id] = target.defaultStrategy
-            }
+        for target in PrivacyTarget.allTargets where targetStrategies[target.id] == nil {
+            targetStrategies[target.id] = target.defaultStrategy
         }
         savePersistedData()
     }
@@ -195,12 +210,44 @@ class AppState: ObservableObject {
         savePersistedData()
     }
 
+    /// Build a snapshot of the current cleaning workload. **Must be called on
+    /// the main thread** before dispatching to a background queue, so the
+    /// background work never touches `@Published` state.
+    func snapshotCleaningJobs() -> [CleaningJob] {
+        enabledTargets.map { target in
+            CleaningJob(target: target, strategy: strategyFor(target))
+        }
+    }
+
+    /// Persist a fresh scan summary in one publish.
+    func applyScanSummary(_ summary: ScanSummary) {
+        scanResults = summary.sizes
+        lockStates = summary.lockStates
+    }
+
+    /// Refresh the cached size + lock state for one target (invoked by the
+    /// per-row "verify" button without re-scanning everything).
+    func refreshTarget(_ target: PrivacyTarget) {
+        let size = TargetScanner.shared.targetSize(target)
+        let locked = TargetScanner.shared.isLocked(target)
+        scanResults[target.id] = size
+        lockStates[target.id] = locked
+    }
+
     // MARK: - Persistence (JSON file for complex data)
 
-    private var persistenceURL: URL {
-        let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
+    private var persistenceURL: URL? {
+        guard let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first else {
+            AppLog.state.error("Could not resolve Application Support directory")
+            return nil
+        }
         let dir = appSupport.appendingPathComponent("BananaBlitz", isDirectory: true)
-        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        do {
+            try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        } catch {
+            AppLog.state.error("Failed to create persistence directory: \(error.localizedDescription, privacy: .public)")
+            return nil
+        }
         return dir.appendingPathComponent("state.json")
     }
 
@@ -213,6 +260,8 @@ class AppState: ObservableObject {
     }
 
     func savePersistedData() {
+        guard let url = persistenceURL else { return }
+
         let data = PersistedData(
             enabledTargetIDs: enabledTargetIDs,
             targetStrategies: targetStrategies,
@@ -220,20 +269,43 @@ class AppState: ObservableObject {
             lastCleanDate: lastCleanDate,
             totalBytesReclaimed: totalBytesReclaimed
         )
-        if let encoded = try? JSONEncoder().encode(data) {
-            try? encoded.write(to: persistenceURL)
+        do {
+            let encoded = try JSONEncoder().encode(data)
+            try encoded.write(to: url, options: .atomic)
+        } catch {
+            AppLog.state.error("Failed to persist state: \(error.localizedDescription, privacy: .public)")
         }
     }
 
     func loadPersistedData() {
-        guard let raw = try? Data(contentsOf: persistenceURL),
-              let persisted = try? JSONDecoder().decode(PersistedData.self, from: raw)
-        else { return }
+        guard let url = persistenceURL,
+              let raw = try? Data(contentsOf: url) else { return }
 
-        enabledTargetIDs    = persisted.enabledTargetIDs
-        targetStrategies    = persisted.targetStrategies
-        cleaningHistory     = persisted.cleaningHistory
-        lastCleanDate       = persisted.lastCleanDate
-        totalBytesReclaimed = persisted.totalBytesReclaimed
+        do {
+            let persisted = try JSONDecoder().decode(PersistedData.self, from: raw)
+            enabledTargetIDs    = persisted.enabledTargetIDs
+            targetStrategies    = persisted.targetStrategies
+            cleaningHistory     = persisted.cleaningHistory
+            lastCleanDate       = persisted.lastCleanDate
+            totalBytesReclaimed = persisted.totalBytesReclaimed
+        } catch {
+            AppLog.state.error("Failed to decode persisted state: \(error.localizedDescription, privacy: .public)")
+        }
+    }
+
+    /// Clear all user-visible state and persisted data. Caller is responsible
+    /// for stopping the scheduler.
+    func resetAll() {
+        hasCompletedOnboarding = false
+        enabledTargetIDs.removeAll()
+        targetStrategies.removeAll()
+        cleaningHistory.removeAll()
+        totalBytesReclaimed = 0
+        lastCleanDate = nil
+        scanResults.removeAll()
+        lockStates.removeAll()
+        // Restart the onboarding wizard from step 0.
+        UserDefaults.standard.removeObject(forKey: StorageKey.onboardingStep)
+        savePersistedData()
     }
 }
