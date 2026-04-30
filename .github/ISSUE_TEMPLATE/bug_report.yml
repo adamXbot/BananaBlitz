@@ -1,0 +1,220 @@
+name: Bug report
+description: Report something in BananaBlitz that isn't working as expected — cleaning, scheduling, locking, recovery, etc.
+title: "[Bug]: "
+labels: ["bug", "needs-triage"]
+# Tip: the `report-type`, `area`, `install-method`, and `cleaning-level`
+# fields below surface quickly in the rendered issue so triagers can
+# scan platform / install / capability state at a glance without
+# reading the whole form.
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to file a bug. The more detail you
+        can give below, the faster we can reproduce and fix it.
+
+        **Before you submit a security finding** — please don't open a
+        public issue. Email `security@adamxbot.dev` instead. See
+        [SECURITY.md](../blob/main/SECURITY.md).
+
+        **System feels broken after a clean?** First, run
+        `./Scripts/unbrick.sh` from the repo to reverse any
+        Lock-with-Immutable-File operations. Then file this report so
+        we can track and prevent the breakage.
+
+  - type: dropdown
+    id: report-type
+    attributes:
+      label: What kind of report is this?
+      description: |
+        Pick the category that fits — leave it on "Feature bug" if
+        unsure.
+      multiple: false
+      options:
+        - Feature bug
+        - Crash / hang
+        - System feature broke after cleaning
+        - Recovery script (`unbrick.sh`) didn't help
+        - Onboarding / install issue
+        - Documentation correction
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: summary
+    attributes:
+      label: What happened?
+      description: A clear description of the bug. What did you expect, and what actually happened?
+      placeholder: |
+        I selected the Paranoid level, ran Blitz Now, and now Spotlight
+        can't find any of my apps. I expected Spotlight to recover
+        automatically.
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to reproduce
+      description: Step-by-step. Mention which targets and strategies were enabled.
+      placeholder: |
+        1. Launch BananaBlitz, complete onboarding at "Paranoid" level.
+        2. In Settings → Targets, confirm "Trial" is enabled with
+           "Lock with Immutable File" strategy.
+        3. Click "Blitz Now" in the menu bar.
+        4. Open Spotlight (⌘Space) and search for any app — no results.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: install-method
+    attributes:
+      label: How did you install BananaBlitz?
+      multiple: false
+      options:
+        - Homebrew Cask (`brew install adamxbot/tap/bananablitz`)
+        - Direct download (DMG from GitHub Releases)
+        - Built from source (Xcode + xcodegen)
+        - Other (describe in the summary)
+    validations:
+      required: true
+
+  - type: input
+    id: app-version
+    attributes:
+      label: BananaBlitz version
+      description: |
+        From the BananaBlitz menu → About BananaBlitz, or
+        `mdls -name kMDItemVersion /Applications/BananaBlitz.app` for
+        installed builds. Source builds: paste `git rev-parse --short HEAD`.
+      placeholder: "v1.0.0 · or commit abc1234"
+    validations:
+      required: true
+
+  - type: input
+    id: macos-version
+    attributes:
+      label: macOS version + chip
+      description: |
+        Apple menu → About This Mac. Both the macOS version and the
+        chip family matter — some bugs only surface on Apple Silicon
+        or only on Intel.
+      placeholder: "macOS 14.5 · Apple M2 Pro · or · macOS 13.6 · Intel"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: cleaning-level
+    attributes:
+      label: Cleaning level in use
+      description: Settings → Schedule → Cleaning Level.
+      multiple: false
+      options:
+        - Basic
+        - Strong
+        - Paranoid
+        - Custom (mixed manually)
+        - Not relevant to this bug
+    validations:
+      required: true
+
+  - type: dropdown
+    id: cleaning-strategy
+    attributes:
+      label: Cleaning strategy in use
+      description: |
+        Settings → Schedule → Global Default Strategy. Pick the
+        primary strategy in play for this bug.
+      multiple: false
+      options:
+        - Wipe Contents (delete files inside)
+        - Lock with Immutable File (replace dir with locked file)
+        - Delete Databases Only (.db / .sqlite / .segb)
+        - Mixed (per-target)
+        - Not relevant to this bug
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: area
+    attributes:
+      label: Which area of the app?
+      description: Pick whichever apply — helps us route the issue to the right surface area.
+      options:
+        - label: Cleaning engine (PrivacyCleaner)
+          required: false
+        - label: Filesystem guard (lock / unlock)
+          required: false
+        - label: Scheduler (automatic cleans, sleep / wake)
+          required: false
+        - label: Snapshot service (`tmutil localsnapshot`)
+          required: false
+        - label: Permission flow (Full Disk Access)
+          required: false
+        - label: Menu bar / popover
+          required: false
+        - label: Settings window
+          required: false
+        - label: Onboarding wizard
+          required: false
+        - label: Updates (Sparkle / Homebrew)
+          required: false
+        - label: Recovery script (`unbrick.sh`)
+          required: false
+        - label: Accessibility (VoiceOver, dynamic type, contrast)
+          required: false
+        - label: Other / not sure
+          required: false
+
+  - type: textarea
+    id: console-logs
+    attributes:
+      label: Console logs
+      description: |
+        Most native-app bugs leave a trail in the unified log. Run
+        this in Terminal *while reproducing the bug*, then paste the
+        output here:
+
+        ```sh
+        log stream --predicate 'subsystem == "com.bananablitz.app"' --info --debug
+        ```
+
+        Or open Console.app, filter by `BananaBlitz`, and copy any
+        red entries. Don't worry about scrubbing — we only need
+        enough context to reproduce.
+      render: shell
+    validations:
+      required: false
+
+  - type: textarea
+    id: crash-trace
+    attributes:
+      label: Crash trace (if applicable)
+      description: |
+        For a crash report, paste the contents of the `.ips` file from
+        `~/Library/Logs/DiagnosticReports/`. macOS stamps these as
+        plain JSON since macOS 12 — it's safe to paste verbatim.
+      render: shell
+    validations:
+      required: false
+
+  - type: textarea
+    id: screenshot
+    attributes:
+      label: Screenshots (optional)
+      description: Drag-and-drop images into this field. Annotated screenshots speed up triage enormously for visual bugs.
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before you submit
+      options:
+        - label: I searched existing issues and didn't find a duplicate.
+          required: true
+        - label: I can reproduce this consistently (or I've described the conditions under which it happens).
+          required: false
+        - label: This is **not** a security vulnerability. (Security issues should go to `security@adamxbot.dev`, not a public issue.)
+          required: true

@@ -132,29 +132,20 @@ private struct MenuBarLabel: View {
     @State private var hasAutoOpened = false
 
     var body: some View {
-        HStack(spacing: 3) {
+        ZStack(alignment: .topTrailing) {
             Text("🍌")
 
-            if appState.showMenuBarStatus {
-                Group {
-                    if !appState.hasCompletedOnboarding {
-                        Image(systemName: "exclamationmark.triangle.fill")
-                            .accessibilityLabel("Onboarding incomplete")
-                    } else if appState.isCurrentlyCleaning {
-                        Image(systemName: "bolt.fill")
-                            .accessibilityLabel("Cleaning")
-                    } else if appState.isPaused {
-                        Image(systemName: "pause.fill")
-                            .accessibilityLabel("Schedule paused")
-                    } else if appState.scheduleInterval != .manual {
-                        Image(systemName: "clock")
-                            .accessibilityLabel("Schedule active")
-                    }
-                }
-                .font(.system(size: 9, weight: .bold))
+            if appState.showMenuBarStatus, let badge = currentBadge {
+                statusBadge(badge)
+                    // Pin to the top-right corner of the banana so the
+                    // overall label still sizes to the banana's bounding
+                    // box. The offset nudges the badge so it overlaps the
+                    // banana's edge like a notification dot rather than
+                    // floating in empty space.
+                    .offset(x: 5, y: -3)
             }
         }
-        .accessibilityLabel("BananaBlitz")
+        .accessibilityLabel(accessibilityDescription)
         .onAppear {
             guard !hasAutoOpened, !appState.hasCompletedOnboarding else { return }
             hasAutoOpened = true
@@ -166,4 +157,68 @@ private struct MenuBarLabel: View {
             }
         }
     }
+
+    // MARK: - Status badge
+
+    /// One status indicator overlaid on the banana, prioritised most-urgent
+    /// first. Returns `nil` for the steady-state idle case so the menu bar
+    /// stays visually quiet when nothing needs attention.
+    private var currentBadge: StatusBadge? {
+        if !appState.hasCompletedOnboarding {
+            return .init(symbol: "exclamationmark", color: .orange,
+                         label: "Onboarding incomplete")
+        }
+        if appState.isCurrentlyCleaning {
+            return .init(symbol: "bolt.fill", color: .blue,
+                         label: "Cleaning")
+        }
+        if appState.isPaused {
+            return .init(symbol: "pause.fill", color: .gray,
+                         label: "Schedule paused")
+        }
+        if appState.scheduleInterval != .manual {
+            // Active-but-idle: a small green dot, no inner glyph. Subtle
+            // enough not to compete with the banana but tells you the
+            // scheduler is armed.
+            return .init(symbol: nil, color: .green,
+                         label: "Schedule active")
+        }
+        return nil
+    }
+
+    @ViewBuilder
+    private func statusBadge(_ badge: StatusBadge) -> some View {
+        ZStack {
+            Circle()
+                .fill(badge.color)
+                .frame(width: 10, height: 10)
+                // Thin border that picks up the system menu bar's
+                // background colour so the badge separates cleanly from
+                // the banana's edge in both light and dark menu bars.
+                .overlay(
+                    Circle()
+                        .strokeBorder(Color(NSColor.windowBackgroundColor), lineWidth: 1)
+                )
+            if let symbol = badge.symbol {
+                Image(systemName: symbol)
+                    .font(.system(size: 6, weight: .black))
+                    .foregroundStyle(.white)
+            }
+        }
+    }
+
+    private var accessibilityDescription: String {
+        if let badge = currentBadge {
+            return "BananaBlitz — \(badge.label)"
+        }
+        return "BananaBlitz"
+    }
+}
+
+/// One overlaid notifier badge. `symbol == nil` renders an indicator dot
+/// without an inner glyph (used for the steady "schedule active" state).
+private struct StatusBadge {
+    let symbol: String?
+    let color: Color
+    let label: String
 }

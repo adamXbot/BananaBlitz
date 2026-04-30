@@ -11,6 +11,15 @@ settings:
   base:
     SWIFT_VERSION: "5"
     DEAD_CODE_STRIPPING: YES
+    # Sandbox custom Run Script build phases. Free correctness win — no
+    # current scripts depend on out-of-sandbox access.
+    ENABLE_USER_SCRIPT_SANDBOXING: YES
+    # Auto-generate Swift symbols for .xcstrings files (when we add them).
+    STRING_CATALOG_GENERATE_SYMBOLS: YES
+    # Asset-symbol extensions are intentionally NOT generated — flip to YES
+    # if you want type-safe `Image.gitHub` accessors alongside the existing
+    # `Image("GitHub")` calls.
+    ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS: NO
 
 packages:
   Sparkle:

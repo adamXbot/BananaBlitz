@@ -1,0 +1,22 @@
+# Disable blank issues so every report starts from a template — makes
+# triage much faster because the structured fields (install method,
+# macOS version, target list) are always present. Users who need a
+# blank canvas can open a Discussion via the link below.
+blank_issues_enabled: false
+
+contact_links:
+  - name: Question or discussion
+    url: https://github.com/adamxbot/BananaBlitz/discussions
+    about: For open-ended questions, ideas, or "is this expected?" — use Discussions instead of an issue.
+
+  - name: Security disclosure
+    url: mailto:security@adamxbot.dev?subject=BananaBlitz%20security%20disclosure
+    about: Found a vulnerability? Please don't open a public issue. Email security@adamxbot.dev — we aim to respond within 72 hours.
+
+  - name: Accessibility feedback
+    url: https://github.com/adamxbot/BananaBlitz/issues/new?template=bug_report.yml&labels=bug,needs-triage,a11y&title=%5BA11y%5D%3A+
+    about: Filing an accessibility issue? Use the bug-report template — it'll be auto-tagged a11y.
+
+  - name: My system feels broken after a clean
+    url: https://github.com/adamxbot/BananaBlitz/issues/new?template=bug_report.yml&labels=bug,needs-triage,recovery&title=%5BRecovery%5D%3A+
+    about: First, run `./Scripts/unbrick.sh` from the repo to undo any locked directories. Then file a bug-report so we can track the breakage.

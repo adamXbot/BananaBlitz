@@ -1,92 +1,119 @@
 name: Release
 
-# Manually triggered. Bumps `MARKETING_VERSION` and `CURRENT_PROJECT_VERSION`
-# in project.yml, commits the change, and pushes a `v<version>` tag. The tag
-# push then triggers the `archive` job in ci.yml which builds, signs,
-# notarizes, and drafts a GitHub release.
-on:
-  workflow_dispatch:
-    inputs:
-      version:
-        description: 'Marketing version (e.g. 1.1.0)'
-        required: true
-        type: string
+# Triggered by pushing a tag matching `v<semver>` (e.g. v1.1.0). The
+# tag name becomes the release version; MARKETING_VERSION in project.yml
+# must match before the workflow will publish.
+#
+# Outputs:
+#   • Signed + notarized DMG attached to the GitHub Release.
+#   • Updated appcast.xml committed to the gh-pages branch so Sparkle
+#     clients pick up the new version on their next check.
+#
+# Required GitHub Actions secrets:
+#   APPLE_DEVELOPER_ID_CERT     — base64 .p12 of the Developer ID
+#                                 Application cert + private key.
+#   APPLE_DEVELOPER_ID_PASSWORD — passphrase for the .p12 above.
+#   APPLE_NOTARY_USER           — Apple ID for `notarytool`.
+#   APPLE_NOTARY_PASSWORD       — app-specific password for that ID.
+#   APPLE_NOTARY_TEAM_ID        — Apple Developer team ID.
+#   SPARKLE_PRIVATE_KEY         — base64 EdDSA private key from
+#                                 Sparkle's generate_keys.
 
-concurrency:
-  group: release
-  cancel-in-progress: false
+on:
+  push:
+    tags:
+      - 'v*'
 
 jobs:
-  tag:
-    name: Bump version + tag
-    runs-on: ubuntu-latest
+  build:
+    runs-on: macos-15
+
     permissions:
       contents: write
+
     steps:
-      - name: Checkout
+      - name: Check out source
         uses: actions/checkout@v6
         with:
           fetch-depth: 0
-          token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Validate version format
+      - name: Select Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
+      - name: Install xcodegen
+        run: brew install xcodegen
+
+      - name: Generate Xcode project
+        run: xcodegen generate
+
+      - name: Verify tag matches MARKETING_VERSION
         run: |
-          if ! [[ "${{ inputs.version }}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            echo "::error ::Version must be x.y.z (got '${{ inputs.version }}')"
+          TAG_VERSION="${GITHUB_REF#refs/tags/v}"
+          PROJECT_VERSION=$(grep -E '^[[:space:]]*MARKETING_VERSION:' project.yml \
+            | head -1 | sed -E 's/.*"([^"]+)".*/\1/')
+          if [[ "$TAG_VERSION" != "$PROJECT_VERSION" ]]; then
+            echo "::error ::tag $TAG_VERSION does not match MARKETING_VERSION $PROJECT_VERSION in project.yml"
             exit 1
           fi
+          echo "MARKETING_VERSION=$PROJECT_VERSION" >> "$GITHUB_ENV"
 
-      - name: Verify tag does not already exist
+      - name: Set up keychain + Developer ID cert
+        env:
+          CERT_BASE64: ${{ secrets.APPLE_DEVELOPER_ID_CERT }}
+          CERT_PASSWORD: ${{ secrets.APPLE_DEVELOPER_ID_PASSWORD }}
         run: |
-          if git rev-parse --verify "refs/tags/v${{ inputs.version }}" >/dev/null 2>&1; then
-            echo "::error ::Tag v${{ inputs.version }} already exists"
-            exit 1
-          fi
+          KEYCHAIN_PATH="$RUNNER_TEMP/build.keychain"
+          KEYCHAIN_PASSWORD="$(uuidgen)"
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          echo -n "$CERT_BASE64" | base64 --decode > "$RUNNER_TEMP/cert.p12"
+          security import "$RUNNER_TEMP/cert.p12" \
+            -P "$CERT_PASSWORD" \
+            -A -t cert -f pkcs12 -k "$KEYCHAIN_PATH"
+          security list-keychain -d user -s \
+            "$KEYCHAIN_PATH" \
+            $(security list-keychains -d user | tr -d '"')
+          rm "$RUNNER_TEMP/cert.p12"
 
-      - name: Bump versions in project.yml
-        id: bump
+      - name: Build, sign, and notarize DMG
+        env:
+          APPLE_NOTARY_USER:     ${{ secrets.APPLE_NOTARY_USER }}
+          APPLE_NOTARY_PASSWORD: ${{ secrets.APPLE_NOTARY_PASSWORD }}
+          APPLE_NOTARY_TEAM_ID:  ${{ secrets.APPLE_NOTARY_TEAM_ID }}
+        run: ./Scripts/release.sh
+
+      - name: Generate appcast
+        env:
+          SPARKLE_PRIVATE_KEY: ${{ secrets.SPARKLE_PRIVATE_KEY }}
+        run: ./Scripts/generate-appcast.sh ./dist
+
+      - name: Attach DMG to GitHub Release
+        uses: softprops/action-gh-release@v3
+        with:
+          files: dist/*.dmg
+          generate_release_notes: true
+          fail_on_unmatched_files: true
+
+      - name: Publish appcast to gh-pages
         run: |
-          VERSION="${{ inputs.version }}"
+          # Publish appcast.xml to the gh-pages branch so Sparkle
+          # clients can fetch it without a release-page round-trip.
+          # We use a worktree so the existing checkout is undisturbed.
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git fetch origin gh-pages || true
+          git worktree add ../gh-pages-checkout gh-pages 2>/dev/null \
+            || git worktree add -b gh-pages ../gh-pages-checkout origin/gh-pages \
+            || git worktree add -b gh-pages ../gh-pages-checkout
+          cp dist/appcast.xml ../gh-pages-checkout/appcast.xml
+          (cd ../gh-pages-checkout && \
+            git add appcast.xml && \
+            git commit -m "Release ${GITHUB_REF#refs/tags/}" && \
+            git push origin gh-pages)
 
-          # MARKETING_VERSION (quoted)
-          sed -i.bak -E "s/(MARKETING_VERSION:[[:space:]]*\")[^\"]+(\")/\\1${VERSION}\\2/" project.yml
-
-          # CURRENT_PROJECT_VERSION (unquoted integer): increment by 1
-          current=$(grep -E '^[[:space:]]*CURRENT_PROJECT_VERSION:' project.yml | sed -E 's/.*:[[:space:]]*([0-9]+).*/\1/' | head -1)
-          if [ -z "$current" ]; then
-            echo "::error ::Could not parse CURRENT_PROJECT_VERSION from project.yml"
-            exit 1
-          fi
-          next=$((current + 1))
-          sed -i.bak -E "s/(CURRENT_PROJECT_VERSION:[[:space:]]*)[0-9]+/\\1${next}/" project.yml
-
-          rm -f project.yml.bak
-
-          echo "marketing=$VERSION" >> "$GITHUB_OUTPUT"
-          echo "build=$next" >> "$GITHUB_OUTPUT"
-
-          echo "Bumped to MARKETING_VERSION=$VERSION, CURRENT_PROJECT_VERSION=$next"
-          echo "----"
-          grep -E "(MARKETING_VERSION|CURRENT_PROJECT_VERSION):" project.yml
-
-      - name: Commit + tag + push
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add project.yml
-          git commit -m "Release v${{ inputs.version }} (build ${{ steps.bump.outputs.build }})"
-          git tag -a "v${{ inputs.version }}" -m "Release v${{ inputs.version }}"
-          git push
-          git push --tags
-
-      - name: Summary
-        run: |
-          {
-            echo "### Released v${{ inputs.version }}"
-            echo ""
-            echo "- MARKETING_VERSION: ${{ steps.bump.outputs.marketing }}"
-            echo "- CURRENT_PROJECT_VERSION: ${{ steps.bump.outputs.build }}"
-            echo ""
-            echo "The pushed tag triggers the \`archive\` job in ci.yml. Once it"
-            echo "finishes, a draft release will be ready at the [Releases page](../../releases)."
-          } >> "$GITHUB_STEP_SUMMARY"
+      - name: Cleanup keychain
+        if: always()
+        run: security delete-keychain "$RUNNER_TEMP/build.keychain" || true

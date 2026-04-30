@@ -7,14 +7,15 @@ Instead of disabling System Integrity Protection (SIP), BananaBlitz uses macOS n
 > [!CAUTION]
 > **Use at your own risk.** BananaBlitz modifies system-generated files and directories within your `~/Library` folder. The "Lock with Immutable File" strategy *is* destructive — it deletes the original directory and replaces it with a locked empty file — but the operation is reversible via the in-app "Save Recovery Script…" button (Settings → Preferences → Data) or the bundled `unbrick.sh`. The developers are not responsible for any data loss, system instability, or unexpected behavior resulting from the use of this utility. Always ensure you have a recent backup of your data.
 
-##
-via brew `brew install adamxbot/tap/bananablitz`
-Or `brew tap adamxbot/tap` and then `brew install bananablitz`.
+## Install
 
-Or via the [latest release](https://github.com/adamXbot/BananaBlitz/releases/latest)
+**Homebrew Cask** (preferred):
+```sh
+brew install adamxbot/tap/bananablitz
+```
 
-Note, you will need to remove app from quarantine as it isn't notarised. This can be done with
-`xattr -cr /Applications/BananaBlitz.app`
+**Direct download:** signed + notarized DMG from the
+[latest release](https://github.com/adamxbot/BananaBlitz/releases/latest).
 
 ## Features
 - **3 Privacy Levels:** Select from Basic (caches), Strong (Biome intelligence), and Paranoid (screentime, Siri profiling).
@@ -55,6 +56,8 @@ The script bundled in this repo is **auto-generated** from the canonical `Privac
 ## Scripts
 All bundled scripts live in `Scripts/`:
 
+- `release.sh` — full release pipeline: archive → sign → notarize → DMG → notarize DMG → staple. Used by `.github/workflows/release.yml`; runs locally too with the right env vars.
+- `generate-appcast.sh` — wraps Sparkle's `generate_appcast` to produce a signed feed for the gh-pages branch.
 - `unbrick.sh` — recovery script that reverses every Lock-with-Immutable-File operation. Auto-generated from `PrivacyTarget.allTargets`.
 - `regenerate-app-icons.sh` — resizes a single source PNG into every slot in `AppIcon.appiconset` using the built-in `sips` tool.
 
@@ -68,39 +71,33 @@ xcodebuild test -scheme BananaBlitz -destination 'platform=macOS'
 Tests cover the `PrivacyCleaner` strategies, `FileSystemGuard` lock/unlock round-trips, `AppState` persistence, and `unbrick.sh` generation. CI runs the same command on every push (`.github/workflows/ci.yml`).
 
 ## Cutting a release
-Releases are driven by GitHub Actions.
 
-1. Run the **Release** workflow (`.github/workflows/release.yml`) from the Actions tab. Provide a `version` input like `1.1.0`.
-2. The workflow bumps `MARKETING_VERSION` and `CURRENT_PROJECT_VERSION` in `project.yml`, commits the change, and pushes a `v<version>` tag.
-3. The pushed tag triggers the `archive` job in `ci.yml`, which:
-   - Runs the test suite again.
-   - Imports your Developer ID certificate (if configured), archives with Hardened Runtime, and signs the app.
-   - Submits the signed bundle to Apple's notary service via `notarytool` (if configured) and staples the ticket.
-   - Zips the result, uploads it as a workflow artifact, and creates a **draft** GitHub release for you to review and publish.
+`MARKETING_VERSION` in `project.yml` is the canonical version. Bump
+both it and `CURRENT_PROJECT_VERSION`, commit, tag, push:
 
-If signing or notarization secrets aren't set, the workflow still produces an unsigned `.zip` and drafts a release — the existing pre-1.0 behaviour. To enable full signing + notarization, add the following secrets to the repository (Settings → Secrets and variables → Actions):
+```sh
+$EDITOR project.yml          # bump MARKETING_VERSION + CURRENT_PROJECT_VERSION
+xcodegen generate
+git commit -am "Release 1.1.0"
+git tag v1.1.0
+git push --follow-tags origin main
+```
 
-| Secret | Contents |
-| --- | --- |
-| `APPLE_DEVELOPER_CERT_BASE64` | `base64 -i DeveloperID.p12` of your Developer ID Application certificate |
-| `APPLE_DEVELOPER_CERT_PASSWORD` | The password used when exporting the `.p12` |
-| `APPLE_TEAM_ID` | 10-char Team ID from your Apple Developer account |
-| `KEYCHAIN_PASSWORD` | (optional) Password used for the temporary CI keychain |
-| `AC_API_KEY_BASE64` | `base64 -i AuthKey_XXXXXX.p8` from App Store Connect → Users and Access → Keys |
-| `AC_API_KEY_ID` | The 10-char Key ID shown next to the key |
-| `AC_API_ISSUER_ID` | Issuer ID from the same App Store Connect page |
+The tag push triggers `.github/workflows/release.yml`, which runs
+`Scripts/release.sh` (build → sign → notarize → DMG → notarize DMG →
+staple), runs `Scripts/generate-appcast.sh` (signs and indexes the DMG
+into the Sparkle feed), publishes the DMG to a GitHub Release, and
+pushes the new `appcast.xml` to the `gh-pages` branch.
 
-Once those are in place, every `v*` tag pushed (whether by `release.yml` or manually) produces a signed + notarized build ready to ship.
 
 ## Auto-updates (Sparkle)
-The app integrates [Sparkle](https://github.com/sparkle-project/Sparkle) but is dormant until you finish signing + notarizing the app, since Sparkle relies on the code signature to verify updates. To enable updates:
 
-1. `brew install --cask sparkle` to get the helper tools.
-2. `generate_keys` — store the private key in the Keychain it prompts for, copy the public key into `Info.plist` under `SUPublicEDKey`.
-3. Pick a stable HTTPS URL for `appcast.xml`. Add it to `Info.plist` as `SUFeedURL`.
-4. After every release: `generate_appcast .` over your release artifacts directory and upload `appcast.xml` to the same host.
-
-Until `SUFeedURL` is populated, the "Check for Updates" button in the About panel is disabled — the rest of the app still works.
+The app integrates [Sparkle](https://github.com/sparkle-project/Sparkle)
+but is dormant until `SUFeedURL` and `SUPublicEDKey` are added to
+`BananaBlitz/Info.plist`. The full setup is in
+[`docs/RELEASES.md`](docs/RELEASES.md). Until those are populated, the
+"Check for Updates…" command is disabled — the rest of the app still
+works.
 
 
 ## Manually locking a file (The visual way)

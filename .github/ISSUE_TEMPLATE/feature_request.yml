@@ -1,0 +1,101 @@
+name: Feature request
+description: Suggest a new capability or improvement to BananaBlitz.
+title: "[Feature]: "
+labels: ["enhancement", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for suggesting an improvement. The clearer the problem
+        and intended use-case, the more likely we are to pick this up
+        quickly.
+
+        For open-ended ideas or "is this expected?" questions, consider
+        starting a Discussion first — see the contact links on the
+        previous page.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem does this solve?
+      description: Describe the pain point. A good framing is "As a user, I want X so that Y."
+      placeholder: |
+        I want to whitelist a single subdirectory inside ~/Library/Biome
+        (the one a third-party app I trust uses) so that BananaBlitz
+        cleans everything else but leaves that one alone.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: If you have an idea for how it could work, describe it here. Happy to iterate on the design together.
+      placeholder: |
+        Add a per-target "exclusions" list in Settings → Targets that
+        accepts subpaths to skip when applying the cleaning strategy.
+    validations:
+      required: false
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Any workarounds you already use, or other shapes the feature could take?
+    validations:
+      required: false
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Which area of the app?
+      description: Pick all that apply. Helps us scope the work.
+      multiple: true
+      options:
+        - Cleaning engine / strategies
+        - New privacy targets
+        - Scheduling
+        - Snapshot / safety
+        - Menu bar / popover UI
+        - Settings window
+        - Onboarding wizard
+        - Updates (Sparkle / Homebrew)
+        - Recovery script
+        - Accessibility
+        - Power-user (history export, dry-run, self-test)
+        - Other
+    validations:
+      required: true
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: How important is this to you?
+      description: Honest answers are most useful — they help us prioritise against other requests.
+      multiple: false
+      options:
+        - "Blocker — I can't use BananaBlitz for my workflow without it"
+        - "High — it would meaningfully improve my workflow"
+        - "Medium — nice-to-have, I'd use it"
+        - "Low — interesting idea, take or leave"
+    validations:
+      required: true
+
+  - type: textarea
+    id: example
+    attributes:
+      label: Example scenario
+      description: |
+        If there's a specific situation that motivated this request,
+        describing it concretely makes the request much easier to
+        evaluate.
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before you submit
+      options:
+        - label: I searched existing issues and Discussions and didn't find a duplicate.
+          required: true
