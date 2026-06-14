@@ -79,7 +79,7 @@ struct ScanStepView: View {
                     Text(level.displayName)
                         .font(.system(size: 14, weight: .semibold))
 
-                    Text(levelDescription(level))
+                    Text(level.description)
                         .font(.system(size: 10))
                         .foregroundStyle(.secondary)
                 }
@@ -197,14 +197,6 @@ struct ScanStepView: View {
 
     private var foundTargetCount: Int {
         scanResults.filter { $0.value > 0 }.count
-    }
-
-    private func levelDescription(_ level: CleaningLevel) -> String {
-        switch level {
-        case .basic: return "Always safe to clean"
-        case .strong:   return "Smart features may degrade"
-        case .paranoid: return "Some things may break"
-        }
     }
 
     private func animateReveal() {

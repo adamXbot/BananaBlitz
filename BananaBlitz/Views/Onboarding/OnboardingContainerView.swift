@@ -141,6 +141,7 @@ struct OnboardingContainerView: View {
                     .foregroundStyle(.black)
                 }
                 .buttonStyle(.plain)
+                .keyboardShortcut(.defaultAction)
                 .disabled(!canProceed)
             } else {
                 Button {

@@ -3,6 +3,7 @@ import SwiftUI
 /// Step 5: Execute the initial clean with a satisfying animation.
 struct CleanStepView: View {
     @EnvironmentObject var appState: AppState
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let scanResults: [String: Int64]
 
     @State private var isCleaning = false
@@ -85,14 +86,15 @@ struct CleanStepView: View {
 
     private var cleaningView: some View {
         VStack(spacing: 20) {
-            // Animated banana
+            // Animated banana — spin is suppressed under Reduce Motion.
             Text("🍌")
                 .font(.system(size: 60))
-                .rotationEffect(.degrees(isCleaning ? 360 : 0))
+                .rotationEffect(.degrees(reduceMotion ? 0 : (isCleaning ? 360 : 0)))
                 .animation(
-                    .linear(duration: 2).repeatForever(autoreverses: false),
+                    reduceMotion ? nil : .linear(duration: 2).repeatForever(autoreverses: false),
                     value: isCleaning
                 )
+                .accessibilityHidden(true)
 
             VStack(spacing: 8) {
                 Text("Cleaning in progress...")
