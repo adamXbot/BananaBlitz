@@ -128,12 +128,18 @@ private struct MenuBarLabel: View {
     @ObservedObject var appState: AppState
     @Environment(\.openWindow) private var openWindow
 
+    /// Observed directly (rather than via `appState`) so the menu bar glyph
+    /// swaps the instant the Settings picker writes a new value: `@AppStorage`
+    /// inside an `ObservableObject` doesn't reliably republish, but `@AppStorage`
+    /// in a `View` reacts to the underlying `UserDefaults` key changing.
+    @AppStorage(StorageKey.menuBarIconStyleRaw) private var menuBarIconStyleRaw = MenuBarIconStyle.bananaMono.rawValue
+
     /// Guard against re-firing if SwiftUI rebuilds the label.
     @State private var hasAutoOpened = false
 
     var body: some View {
         ZStack(alignment: .topTrailing) {
-            Text("🍌")
+            MenuBarIconGlyph(style: MenuBarIconStyle(rawValue: menuBarIconStyleRaw) ?? .bananaMono)
 
             if appState.showMenuBarStatus, let badge = currentBadge {
                 statusBadge(badge)
@@ -221,4 +227,58 @@ private struct StatusBadge {
     let symbol: String?
     let color: Color
     let label: String
+}
+
+// MARK: - Menu bar icon glyph
+
+/// Renders the user's chosen base menu bar glyph (without the status badge),
+/// shared by the menu bar label and the Settings picker preview so both stay
+/// in sync. The mono banana and the SF Symbol are template images, so the
+/// system tints them to match the menu bar; the colour banana stays yellow.
+struct MenuBarIconGlyph: View {
+    let style: MenuBarIconStyle
+
+    var body: some View {
+        switch style {
+        case .banana:
+            Text("🍌")
+        case .bananaMono:
+            Image(nsImage: Self.monoBananaTemplate)
+        case .sparkles:
+            Image(systemName: "sparkles")
+        }
+    }
+
+    /// A monochrome banana drawn as a hollow (outline) *template* `NSImage`, so
+    /// a status item tints it black-in-light / white-in-dark and inverts it
+    /// while the menu is open — exactly how an SF Symbol behaves — with no asset
+    /// to ship. Built once and reused; status items copy it as needed.
+    static let monoBananaTemplate: NSImage = {
+        let side: CGFloat = 18
+        let image = NSImage(size: NSSize(width: side, height: side), flipped: true) { _ in
+            // Authored in a 24×24 design space (origin top-left), sized to fill
+            // the box with a small margin so the outline reads at menu-bar size,
+            // then scaled to the image. The two on-curve points near (20,20)
+            // form the rounded lower tip; the path closes at the upper tip.
+            let s = side / 24.0
+            func p(_ x: CGFloat, _ y: CGFloat) -> NSPoint { NSPoint(x: x * s, y: y * s) }
+
+            let banana = NSBezierPath()
+            banana.move(to: p(4.5, 2.9))
+            banana.curve(to: p(20.4, 20.0), controlPoint1: p(3.5, 13.5), controlPoint2: p(10.6, 20.8))
+            banana.curve(to: p(19.1, 18.2), controlPoint1: p(20.6, 19.1), controlPoint2: p(20.2, 18.4))
+            banana.curve(to: p(6.6, 3.9),   controlPoint1: p(11.4, 16.6), controlPoint2: p(6.5, 10.9))
+            banana.curve(to: p(4.5, 2.9),   controlPoint1: p(6.5, 2.9),   controlPoint2: p(5.4, 2.2))
+            banana.close()
+
+            banana.lineWidth = 1.6
+            banana.lineJoinStyle = .round
+            banana.lineCapStyle = .round
+            NSColor.black.setStroke()
+            banana.stroke()
+            return true
+        }
+        image.isTemplate = true
+        return image
+    }()
 }

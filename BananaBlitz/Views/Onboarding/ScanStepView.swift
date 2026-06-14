@@ -28,6 +28,13 @@ struct ScanStepView: View {
             .padding(.top, 16)
 
             if !isScanning {
+                // Without Full Disk Access, protected targets read as 0 bytes
+                // and would otherwise look identical to genuinely-absent ones.
+                if !appState.fullDiskAccessGranted {
+                    fdaMissingBanner
+                        .padding(.horizontal, 24)
+                }
+
                 // Categorised results
                 ScrollView {
                     VStack(spacing: 12) {
@@ -108,10 +115,16 @@ struct ScanStepView: View {
                                 Text(size.formattedBytes)
                                     .font(.system(size: 10, design: .monospaced))
                                     .foregroundStyle(.secondary)
-                            } else {
+                            } else if appState.fullDiskAccessGranted {
                                 Text("not found")
                                     .font(.system(size: 10))
                                     .foregroundStyle(.quaternary)
+                            } else {
+                                // Can't actually tell absent from unreadable
+                                // without access — don't claim "not found".
+                                Text("needs access")
+                                    .font(.system(size: 10))
+                                    .foregroundStyle(.orange.opacity(0.8))
                             }
                         }
                         .padding(.horizontal, 8)
@@ -135,6 +148,45 @@ struct ScanStepView: View {
         .onTapGesture {
             // Toggle expansion could be added here
         }
+    }
+
+    // MARK: - FDA Banner
+
+    /// Shown when the scan ran without Full Disk Access, so the user knows the
+    /// "needs access" rows aren't claims that those targets are absent.
+    private var fdaMissingBanner: some View {
+        HStack(spacing: 10) {
+            Image(systemName: "lock.shield")
+                .font(.system(size: 14))
+                .foregroundStyle(.orange)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Full Disk Access isn't granted")
+                    .font(.system(size: 12, weight: .semibold))
+                Text("Protected targets can't be read, so they show as “needs access” even if they exist. Grant access for an accurate scan.")
+                    .font(.system(size: 10))
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            Spacer()
+
+            Button("Open Settings") {
+                PermissionChecker.shared.openFullDiskAccessSettings()
+            }
+            .buttonStyle(.plain)
+            .font(.system(size: 11, weight: .semibold))
+            .foregroundStyle(.blue)
+        }
+        .padding(12)
+        .background(
+            RoundedRectangle(cornerRadius: 10)
+                .fill(Color.orange.opacity(0.1))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 10)
+                        .strokeBorder(Color.orange.opacity(0.3), lineWidth: 1)
+                )
+        )
     }
 
     // MARK: - Helpers

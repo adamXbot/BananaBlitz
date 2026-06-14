@@ -21,7 +21,7 @@ enum CleaningStrategy: String, CaseIterable, Codable, Identifiable {
         case .wipeContents:
             return "Delete all files inside the directory. The daemon will recreate them on next run."
         case .replaceWithFile:
-            return "Replace the directory with a locked empty file. The daemon cannot recreate its data store. Reversible."
+            return "Deletes the directory, then replaces it with a locked empty file the daemon can't recreate. The lock is reversible with the recovery script; the deleted contents are not."
         case .deleteDatabases:
             return "Delete only .db, .sqlite, and .segb files. Least disruptive option."
         }

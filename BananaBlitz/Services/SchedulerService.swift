@@ -19,10 +19,16 @@ final class SchedulerService: ObservableObject {
 
     private var timer: Timer?
     private weak var appState: AppState?
-    private let cleaner = PrivacyCleaner.shared
+    private let cleaner: CleaningEngine
     private let log = AppLog.scheduler
 
     private var wakeObserver: NSObjectProtocol?
+
+    /// `cleaner` is injectable so tests can drive the real clean/complete/
+    /// release path with a spy back-end. Production uses the shared cleaner.
+    init(cleaner: CleaningEngine = PrivacyCleaner.shared) {
+        self.cleaner = cleaner
+    }
 
     deinit {
         if let observer = wakeObserver {
@@ -39,6 +45,13 @@ final class SchedulerService: ObservableObject {
         installWakeObserver()
         catchUpIfOverdue()
         updateSchedule()
+    }
+
+    /// Test seam: attach state without installing observers or requesting
+    /// notification permission (the latter is unavailable in a logic-test
+    /// bundle). Not used in production — production goes through `configure`.
+    func attachStateForTesting(_ state: AppState) {
+        self.appState = state
     }
 
     /// Rebuild the timer based on current app state settings.
@@ -123,13 +136,21 @@ final class SchedulerService: ObservableObject {
         }
 
         // Snapshot the workload on the main thread before going to background.
-        let jobs = state.snapshotCleaningJobs()
+        // Unattended runs have no confirmation gate, so downgrade the
+        // destructive "Lock with Immutable File" strategy to a non-destructive
+        // wipe unless the user has explicitly opted in.
+        let jobs = Self.unattendedJobs(for: state)
         guard !jobs.isEmpty else {
             log.debug("Scheduled fire skipped: no enabled targets")
             return
         }
 
-        state.isCurrentlyCleaning = true
+        guard beginCleaning(state: state, source: "scheduled") else {
+            // Another clean is in flight; keep the displayed countdown honest
+            // for the next opportunity rather than leaving it in the past.
+            nextCleanDate = Date().addingTimeInterval(state.scheduleInterval.rawValue)
+            return
+        }
 
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             guard let self = self else { return }
@@ -139,7 +160,7 @@ final class SchedulerService: ObservableObject {
                 for result in results {
                     state.addResult(result)
                 }
-                state.isCurrentlyCleaning = false
+                self.finishCleaning(state: state)
                 self.nextCleanDate = Date().addingTimeInterval(state.scheduleInterval.rawValue)
 
                 let failures = results.filter { !$0.success }
@@ -156,6 +177,11 @@ final class SchedulerService: ObservableObject {
     }
 
     /// Execute a manual "Blitz Now" clean.
+    ///
+    /// `completion` receives an empty array both when nothing was cleaned *and*
+    /// when the run was skipped because another clean is already in flight, so
+    /// callers that need to distinguish "skipped" should pre-check
+    /// `AppState.isCurrentlyCleaning` (as the menu bar does).
     func performManualClean(completion: @escaping ([CleaningResult]) -> Void) {
         guard let state = appState else {
             completion([])
@@ -169,7 +195,10 @@ final class SchedulerService: ObservableObject {
             return
         }
 
-        state.isCurrentlyCleaning = true
+        guard beginCleaning(state: state, source: "manual") else {
+            completion([])
+            return
+        }
 
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             guard let self = self else { return }
@@ -179,7 +208,7 @@ final class SchedulerService: ObservableObject {
                 for result in results {
                     state.addResult(result)
                 }
-                state.isCurrentlyCleaning = false
+                self.finishCleaning(state: state)
 
                 if self.isActive {
                     self.nextCleanDate = Date().addingTimeInterval(state.scheduleInterval.rawValue)
@@ -187,6 +216,44 @@ final class SchedulerService: ObservableObject {
 
                 completion(results)
             }
+        }
+    }
+
+    private func beginCleaning(state: AppState, source: String) -> Bool {
+        // `AppState.isCurrentlyCleaning` is the single source of truth for the
+        // mutex, shared with the onboarding first-run clean.
+        guard state.beginCleaningIfIdle() else {
+            log.debug("\(source, privacy: .public) clean skipped: another clean is already running")
+            return false
+        }
+        return true
+    }
+
+    private func finishCleaning(state: AppState) {
+        state.endCleaning()
+    }
+
+    /// The jobs an unattended run will actually execute: the current workload
+    /// snapshot with aggressive locks downgraded unless the user opted in.
+    /// Extracted so the snapshot→sanitise→flag wiring is unit-testable without
+    /// driving the async clean. **Main-thread only** (reads `@Published` state).
+    static func unattendedJobs(for state: AppState) -> [CleaningJob] {
+        sanitiseForUnattendedRun(
+            state.snapshotCleaningJobs(),
+            allowAggressive: state.allowAggressiveScheduledClean
+        )
+    }
+
+    /// Coerce the destructive `replaceWithFile` ("Lock with Immutable File")
+    /// strategy down to a non-destructive `wipeContents` for unattended
+    /// (scheduled / catch-up / wake) runs, unless the user has opted in.
+    /// Every `replaceWithFile`-capable target also supports `wipeContents`,
+    /// so the downgrade is always a valid strategy for the target.
+    static func sanitiseForUnattendedRun(_ jobs: [CleaningJob], allowAggressive: Bool) -> [CleaningJob] {
+        guard !allowAggressive else { return jobs }
+        return jobs.map { job in
+            guard job.strategy.isAggressive else { return job }
+            return CleaningJob(target: job.target, strategy: .wipeContents)
         }
     }
 

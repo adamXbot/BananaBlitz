@@ -6,6 +6,7 @@ import XCTest
 final class PrivacyCleanerTests: XCTestCase {
 
     private var sandbox: URL!
+    private var cleaner: PrivacyCleaner!
     private let fm = FileManager.default
 
     override func setUpWithError() throws {
@@ -13,6 +14,7 @@ final class PrivacyCleanerTests: XCTestCase {
         sandbox = URL(fileURLWithPath: NSTemporaryDirectory())
             .appendingPathComponent("bananablitz-tests-\(UUID().uuidString)", isDirectory: true)
         try fm.createDirectory(at: sandbox, withIntermediateDirectories: true)
+        cleaner = PrivacyCleaner(libraryRoot: sandbox.path)
     }
 
     override func tearDownWithError() throws {
@@ -20,6 +22,7 @@ final class PrivacyCleanerTests: XCTestCase {
             try fm.removeItem(at: sandbox)
         }
         sandbox = nil
+        cleaner = nil
         try super.tearDownWithError()
     }
 
@@ -59,7 +62,7 @@ final class PrivacyCleanerTests: XCTestCase {
         _ = try writeFile("b.bin", in: dir)
 
         let target = makeTarget(path: dir.path)
-        let result = PrivacyCleaner.shared.clean(target: target, strategy: .wipeContents)
+        let result = cleaner.clean(target: target, strategy: .wipeContents)
 
         XCTAssertTrue(result.success, "expected success, got \(String(describing: result.error))")
         XCTAssertTrue(fm.fileExists(atPath: dir.path), "directory itself should be retained")
@@ -70,7 +73,7 @@ final class PrivacyCleanerTests: XCTestCase {
     func test_wipeContents_isNoOpForMissingPath() {
         let missing = sandbox.appendingPathComponent("does-not-exist")
         let target = makeTarget(path: missing.path)
-        let result = PrivacyCleaner.shared.clean(target: target, strategy: .wipeContents)
+        let result = cleaner.clean(target: target, strategy: .wipeContents)
         XCTAssertTrue(result.success)
         XCTAssertEqual(result.bytesReclaimed, 0)
     }
@@ -87,7 +90,7 @@ final class PrivacyCleanerTests: XCTestCase {
         _ = try writeFile("qux.sqlite-wal", in: dir)
 
         let target = makeTarget(path: dir.path)
-        let result = PrivacyCleaner.shared.clean(target: target, strategy: .deleteDatabases)
+        let result = cleaner.clean(target: target, strategy: .deleteDatabases)
         XCTAssertTrue(result.success)
 
         let remaining = Set(try fm.contentsOfDirectory(atPath: dir.path))
@@ -102,7 +105,7 @@ final class PrivacyCleanerTests: XCTestCase {
         _ = try writeFile("b.txt", in: sub)
 
         let target = makeTarget(path: dir.path)
-        let result = PrivacyCleaner.shared.clean(target: target, strategy: .deleteDatabases)
+        let result = cleaner.clean(target: target, strategy: .deleteDatabases)
         XCTAssertTrue(result.success)
 
         XCTAssertFalse(fm.fileExists(atPath: sub.appendingPathComponent("a.db").path))
@@ -114,8 +117,37 @@ final class PrivacyCleanerTests: XCTestCase {
     func test_wipeContents_onSpecificFileRemovesIt() throws {
         let file = try writeFile("kbd.db", in: sandbox)
         let target = makeTarget(path: file.path, isFile: true)
-        let result = PrivacyCleaner.shared.clean(target: target, strategy: .wipeContents)
+        let result = cleaner.clean(target: target, strategy: .wipeContents)
         XCTAssertTrue(result.success)
         XCTAssertFalse(fm.fileExists(atPath: file.path))
+    }
+
+    func test_wipeContents_refusesTopLevelSymlinkTarget() throws {
+        let outside = sandbox.appendingPathComponent("outside", isDirectory: true)
+        let link = sandbox.appendingPathComponent("link", isDirectory: true)
+        try fm.createDirectory(at: outside, withIntermediateDirectories: true)
+        try fm.createSymbolicLink(at: link, withDestinationURL: outside)
+
+        let target = makeTarget(path: link.path)
+        let result = cleaner.clean(target: target, strategy: .wipeContents)
+
+        XCTAssertFalse(result.success)
+        XCTAssertTrue(result.error?.contains("symlink") == true)
+    }
+
+    func test_deleteDatabases_skipsSymlinkDatabaseFiles() throws {
+        let dir = sandbox.appendingPathComponent("db-links", isDirectory: true)
+        let outside = sandbox.appendingPathComponent("outside.db")
+        let link = dir.appendingPathComponent("linked.db")
+        try fm.createDirectory(at: dir, withIntermediateDirectories: true)
+        try "secret".data(using: .utf8)!.write(to: outside)
+        try fm.createSymbolicLink(at: link, withDestinationURL: outside)
+
+        let target = makeTarget(path: dir.path)
+        let result = cleaner.clean(target: target, strategy: .deleteDatabases)
+
+        XCTAssertTrue(result.success, "expected success, got \(String(describing: result.error))")
+        XCTAssertTrue(fm.fileExists(atPath: outside.path))
+        XCTAssertTrue(PathSafety.isSymbolicLink(at: link.path))
     }
 }

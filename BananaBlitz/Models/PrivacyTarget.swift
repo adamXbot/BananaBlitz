@@ -259,10 +259,10 @@ struct PrivacyTarget: Identifiable, Codable, Hashable {
         PrivacyTarget(
             id: "daemon-containers",
             name: "Daemon Containers",
-            description: "Container data for system daemons including intelligent routing optimisation.",
+            description: "Per-daemon sandbox container store for many system services — broader than telemetry alone.",
             path: "~/Library/Daemon Containers",
             level: .paranoid,
-            sideEffect: "Some system routing optimisation may degrade",
+            sideEffect: "Invasive: system services rebuild their containers and some may misbehave until you log out or restart.",
             supportedStrategies: [.wipeContents],
             defaultStrategy: .wipeContents,
             isSpecificFile: false

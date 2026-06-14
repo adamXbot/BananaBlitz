@@ -5,6 +5,8 @@ struct PermissionStepView: View {
     @EnvironmentObject var appState: AppState
     @State private var hasAccess = false
     @State private var checkTimer: Timer?
+    @State private var pollAttempts = 0
+    @State private var showTroubleshooting = false
 
     var body: some View {
         VStack(spacing: 24) {
@@ -37,6 +39,13 @@ struct PermissionStepView: View {
 
             if !hasAccess {
                 VStack(spacing: 16) {
+                    // Why this is needed — set expectations about the broad grant.
+                    Text("BananaBlitz runs outside the macOS sandbox so it can reach the tracking folders System Settings keeps hidden. It only ever touches the targets you enable, and you can revoke this access anytime in System Settings.")
+                        .font(.system(size: 11))
+                        .foregroundStyle(.tertiary)
+                        .multilineTextAlignment(.center)
+                        .frame(maxWidth: 420)
+
                     // Steps
                     VStack(alignment: .leading, spacing: 12) {
                         stepRow(number: 1, text: "Click the button below to open System Settings")
@@ -75,6 +84,27 @@ struct PermissionStepView: View {
                         Text("Checking for access...")
                             .font(.system(size: 11))
                             .foregroundStyle(.tertiary)
+                    }
+
+                    // Surfaced only after a while of unsuccessful polling, so a
+                    // user who toggled the wrong app or needs a relaunch isn't
+                    // stuck staring at an endless spinner.
+                    if showTroubleshooting {
+                        VStack(spacing: 8) {
+                            Text("Still waiting? Make sure you toggled **BananaBlitz** specifically, then quit and reopen — macOS sometimes needs a relaunch to apply Full Disk Access.")
+                                .font(.system(size: 11))
+                                .foregroundStyle(.secondary)
+                                .multilineTextAlignment(.center)
+                                .frame(maxWidth: 400)
+
+                            Button("Quit BananaBlitz") {
+                                NSApplication.shared.terminate(nil)
+                            }
+                            .buttonStyle(.plain)
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundStyle(.blue)
+                        }
+                        .transition(.opacity)
                     }
                 }
             }
@@ -116,7 +146,17 @@ struct PermissionStepView: View {
                     hasAccess = access
                 }
                 appState.fullDiskAccessGranted = access
-                if access { stopPolling() }
+                if access {
+                    stopPolling()
+                } else {
+                    pollAttempts += 1
+                    // ~16s of polling with no access → offer troubleshooting.
+                    if pollAttempts >= 8 && !showTroubleshooting {
+                        withAnimation(.easeInOut(duration: 0.3)) {
+                            showTroubleshooting = true
+                        }
+                    }
+                }
             }
         }
     }

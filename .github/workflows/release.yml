@@ -85,6 +85,9 @@ jobs:
           APPLE_NOTARY_TEAM_ID:  ${{ secrets.APPLE_NOTARY_TEAM_ID }}
         run: ./Scripts/release.sh
 
+      - name: Install Sparkle CLI tools
+        run: brew install --cask sparkle
+
       - name: Generate appcast
         env:
           SPARKLE_PRIVATE_KEY: ${{ secrets.SPARKLE_PRIVATE_KEY }}

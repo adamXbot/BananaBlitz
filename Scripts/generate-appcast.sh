@@ -48,7 +48,13 @@ if ! command -v "$GENERATE_APPCAST" >/dev/null 2>&1; then
   # Try common Homebrew install paths before giving up.
   for candidate in \
     "/opt/homebrew/Caskroom/sparkle/"*"/bin/generate_appcast" \
-    "/usr/local/Caskroom/sparkle/"*"/bin/generate_appcast"
+    "/opt/homebrew/Caskroom/sparkle/"*"/Sparkle.app/Contents/Resources/generate_appcast" \
+    "/opt/homebrew/Caskroom/sparkle/"*"/Sparkle.app/Contents/Resources/bin/generate_appcast" \
+    "/usr/local/Caskroom/sparkle/"*"/bin/generate_appcast" \
+    "/usr/local/Caskroom/sparkle/"*"/Sparkle.app/Contents/Resources/generate_appcast" \
+    "/usr/local/Caskroom/sparkle/"*"/Sparkle.app/Contents/Resources/bin/generate_appcast" \
+    "/Applications/Sparkle.app/Contents/Resources/generate_appcast" \
+    "/Applications/Sparkle.app/Contents/Resources/bin/generate_appcast"
   do
     if [[ -x "$candidate" ]]; then
       GENERATE_APPCAST="$candidate"

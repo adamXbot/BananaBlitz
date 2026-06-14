@@ -16,6 +16,7 @@ struct SettingsView: View {
     @State private var dryRunSheetPresented = false
     @State private var selfTestReports: [SelfTest.Report] = []
     @State private var selfTestSheetPresented = false
+    @State private var resetConfirmationPresented = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -136,6 +137,10 @@ struct SettingsView: View {
                             .foregroundStyle(.secondary)
                     }
                 }
+            }
+
+            Section(footer: Text("Scheduled cleans run with no confirmation. By default the destructive \"Lock with Immutable File\" strategy is downgraded to a plain wipe for scheduled runs. Enable this only if you want directories deleted-and-locked automatically.")) {
+                Toggle("Allow locking on schedule", isOn: $appState.allowAggressiveScheduledClean)
             }
 
             Section("Cleaning Level") {
@@ -265,6 +270,20 @@ struct SettingsView: View {
                     set: { appState.showMenuBarStatus = $0 }
                 ))
 
+                Picker("Menu Bar Icon", selection: Binding(
+                    get: { appState.menuBarIconStyle },
+                    set: { appState.menuBarIconStyle = $0 }
+                )) {
+                    ForEach(MenuBarIconStyle.allCases) { style in
+                        HStack {
+                            MenuBarIconGlyph(style: style)
+                            Text(style.displayName)
+                        }
+                        .tag(style)
+                    }
+                }
+                .pickerStyle(.menu)
+
                 Toggle("Menu Bar Global Shortcut (⌘⌃B)", isOn: Binding(
                     get: { appState.enableKeyboardShortcut },
                     set: { appState.enableKeyboardShortcut = $0 }
@@ -312,7 +331,13 @@ struct SettingsView: View {
                 }
 
                 Button("Preview Next Clean (Dry Run)…") {
-                    let jobs = appState.snapshotCleaningJobs()
+                    // Preview what the *scheduled* run will actually do: apply
+                    // the same unattended downgrade so the sheet doesn't show a
+                    // destructive lock that won't happen on schedule.
+                    let jobs = SchedulerService.sanitiseForUnattendedRun(
+                        appState.snapshotCleaningJobs(),
+                        allowAggressive: appState.allowAggressiveScheduledClean
+                    )
                     Task.detached(priority: .userInitiated) {
                         let reports = DryRun.plan(jobs: jobs)
                         await MainActor.run {
@@ -337,12 +362,24 @@ struct SettingsView: View {
                 }
 
                 Button("Reset All Settings", role: .destructive) {
-                    scheduler.stop()
-                    appState.resetAll()
+                    resetConfirmationPresented = true
+                }
+                .confirmationDialog(
+                    "Reset all BananaBlitz settings?",
+                    isPresented: $resetConfirmationPresented,
+                    titleVisibility: .visible
+                ) {
+                    Button("Reset Everything", role: .destructive) {
+                        scheduler.stop()
+                        appState.resetAll()
 
-                    dismiss()
-                    openWindow(id: "onboarding")
-                    AppActivator.shared.bringWindowForward(titled: "Welcome to BananaBlitz")
+                        dismiss()
+                        openWindow(id: "onboarding")
+                        AppActivator.shared.bringWindowForward(titled: "Welcome to BananaBlitz")
+                    }
+                    Button("Cancel", role: .cancel) {}
+                } message: {
+                    Text("This clears your cleaning history, target selection, strategies, and schedule, then restarts onboarding. It can't be undone. Directories you've locked are not unlocked — use the recovery script for those.")
                 }
             }
 
