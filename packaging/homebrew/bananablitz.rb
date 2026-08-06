@@ -1,18 +1,18 @@
-# BananaBlitz Homebrew Cask
+# BananaBlitz Homebrew Cask — TEMPLATE
 #
-# Canonical source. Copy this file into adamxbot/homebrew-tap on every
-# release so end users on `brew install adamxbot/tap/bananablitz` get
-# the new version. Per-release updates: bump `version` and `sha256`
-# below, then sync.
-#
-# To compute sha256:
-#   shasum -a 256 dist/BananaBlitz-X.Y.Z.dmg
+# Canonical source. The release pipeline (privacykey/gh-workflows'
+# macos-sparkle-release.yml cask step) substitutes the @@VERSION@@,
+# @@SHA256@@, and @@URL@@ placeholders and pushes the rendered cask to
+# adamxbot/homebrew-tap on every release, so end users on
+# `brew install adamxbot/tap/bananablitz` get the new version. Do not
+# hand-edit version/sha256/url here — everything else passes through
+# to the tap verbatim.
 
 cask "bananablitz" do
-  version "0.0.0"
-  sha256 "0000000000000000000000000000000000000000000000000000000000000000"
+  version "@@VERSION@@"
+  sha256 "@@SHA256@@"
 
-  url "https://github.com/adamxbot/BananaBlitz/releases/download/v#{version}/BananaBlitz-#{version}.dmg"
+  url "@@URL@@"
   name "BananaBlitz"
   desc "Periodically clean macOS telemetry caches in ~/Library"
   homepage "https://github.com/adamxbot/BananaBlitz"
