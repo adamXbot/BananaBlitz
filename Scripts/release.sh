@@ -1,23 +1,29 @@
 #!/usr/bin/env bash
 # release.sh — build → codesign → notarize → DMG, all in one shot.
 #
-# Designed to run inside CI (.github/workflows/release.yml) but works
-# locally too if you've imported the Developer ID cert into the
-# default keychain and stashed the notary credentials in your
-# environment.
+# Designed to run inside CI (privacykey/gh-workflows'
+# macos-sparkle-release.yml, called from .github/workflows/release.yml)
+# but works locally too if you've imported the Developer ID cert into
+# the default keychain and stashed the notary credentials in your
+# environment. Follows that workflow's release-script env contract.
 #
 # Outputs:
-#   dist/BananaBlitz-<version>.dmg — signed + notarized + stapled
+#   dist/BananaBlitz-<version>.dmg             — signed + notarized + stapled
+#   symbols/BananaBlitz-<version>.app.dSYM.zip — for crash symbolication
 #
-# Required environment:
-#   APPLE_NOTARY_USER           Apple ID for notarytool.
-#   APPLE_NOTARY_PASSWORD       App-specific password.
-#   APPLE_NOTARY_TEAM_ID        Apple Developer team ID.
+# Required environment (App Store Connect API key for notarytool):
+#   APPLE_API_KEY_PATH          Path to the ASC .p8 key file.
+#   APPLE_API_KEY_ID            10-char Key ID.
+#   APPLE_API_ISSUER            Issuer UUID.
 #
 # Optional:
-#   DEVELOPER_ID                Override the Developer ID common name
-#                               (defaults to the first matching cert
-#                               in the keychain).
+#   APPLE_SIGNING_IDENTITY      Developer ID common name (defaults to
+#                               the first matching cert in the
+#                               keychain; DEVELOPER_ID still works as
+#                               a legacy alias).
+#   KEYCHAIN_PATH               Keychain for the direct codesign call
+#                               (CI's ephemeral keychain; omit locally
+#                               to use the default search list).
 #   SCHEME                      xcodebuild scheme (default: BananaBlitz).
 
 set -euo pipefail
@@ -27,6 +33,20 @@ cd "$REPO_ROOT"
 
 SCHEME="${SCHEME:-BananaBlitz}"
 CONFIG="Release"
+
+# Fail fast if the notarization credentials are missing.
+for var in APPLE_API_KEY_PATH APPLE_API_KEY_ID APPLE_API_ISSUER; do
+  if [[ -z "${!var:-}" ]]; then
+    echo "error: $var is unset — notarytool needs the App Store Connect API key" >&2
+    echo "       (key file path, 10-char Key ID, and Issuer UUID)" >&2
+    exit 2
+  fi
+done
+NOTARY_ARGS=(
+  --key     "$APPLE_API_KEY_PATH"
+  --key-id  "$APPLE_API_KEY_ID"
+  --issuer  "$APPLE_API_ISSUER"
+)
 ARCHIVE_PATH="$REPO_ROOT/dist/${SCHEME}.xcarchive"
 EXPORT_PATH="$REPO_ROOT/dist/export"
 DIST_DIR="$REPO_ROOT/dist"
@@ -52,8 +72,10 @@ if [[ ! -d "$REPO_ROOT/BananaBlitz.xcodeproj" ]]; then
 fi
 
 # ── 2. Resolve the signing identity ────────────────────────────────
-DEVELOPER_ID="${DEVELOPER_ID:-$(security find-identity -v -p codesigning \
-  | awk -F'"' '/Developer ID Application/ {print $2; exit}')}"
+# CI provides APPLE_SIGNING_IDENTITY; locally we fall back to probing
+# the keychain (DEVELOPER_ID kept as a legacy alias).
+DEVELOPER_ID="${APPLE_SIGNING_IDENTITY:-${DEVELOPER_ID:-$(security find-identity -v -p codesigning \
+  | awk -F'"' '/Developer ID Application/ {print $2; exit}')}}"
 if [[ -z "$DEVELOPER_ID" ]]; then
   echo "error: no Developer ID Application identity found in keychain" >&2
   exit 2
@@ -97,19 +119,38 @@ if [[ ! -d "$APP_PATH" ]]; then
   exit 2
 fi
 
+# ── 4b. Stage the dSYM for crash symbolication ─────────────────────
+# Kept in symbols/ (not dist/) so Sparkle's generate_appcast doesn't
+# treat it as another release archive; CI moves it into dist/ after
+# the appcast is generated.
+DSYM_SRC="$ARCHIVE_PATH/dSYMs/${SCHEME}.app.dSYM"
+if [[ -d "$DSYM_SRC" ]]; then
+  SYMBOLS_DIR="$REPO_ROOT/symbols"
+  mkdir -p "$SYMBOLS_DIR"
+  DSYM_ZIP="$SYMBOLS_DIR/${SCHEME}-${VERSION}.app.dSYM.zip"
+  rm -f "$DSYM_ZIP"
+  ditto -c -k --keepParent "$DSYM_SRC" "$DSYM_ZIP"
+  echo "dSYM staged: $DSYM_ZIP"
+else
+  echo "warning: no dSYM at $DSYM_SRC — crashes won't be symbolicatable" >&2
+fi
+
 # ── 5. Notarize the .app ───────────────────────────────────────────
 ZIP_PATH="$DIST_DIR/${SCHEME}-notarize.zip"
 ditto -c -k --sequesterRsrc --keepParent "$APP_PATH" "$ZIP_PATH"
 
 xcrun notarytool submit "$ZIP_PATH" \
-  --apple-id    "$APPLE_NOTARY_USER" \
-  --password    "$APPLE_NOTARY_PASSWORD" \
-  --team-id     "$APPLE_NOTARY_TEAM_ID" \
+  "${NOTARY_ARGS[@]}" \
   --wait
 
 # Staple so Gatekeeper can verify offline.
 xcrun stapler staple "$APP_PATH"
 xcrun stapler validate "$APP_PATH"
+
+# Drop the notarization zip: CI's generate_appcast scans everything in
+# dist/, and a second archive containing the same app version would
+# collide with the DMG.
+rm -f "$ZIP_PATH"
 
 # ── 6. Build the DMG ───────────────────────────────────────────────
 DMG_PATH="$DIST_DIR/BananaBlitz-$VERSION.dmg"
@@ -126,12 +167,15 @@ hdiutil create \
   "$DMG_PATH"
 
 # Sign + staple the DMG itself so the download isn't quarantined on
-# first open.
-codesign --force --sign "$DEVELOPER_ID" "$DMG_PATH"
+# first open. Pin codesign to the CI keychain when one is provided so
+# it never falls through to an interactive unlock prompt.
+if [[ -n "${KEYCHAIN_PATH:-}" ]]; then
+  codesign --force --keychain "$KEYCHAIN_PATH" --sign "$DEVELOPER_ID" "$DMG_PATH"
+else
+  codesign --force --sign "$DEVELOPER_ID" "$DMG_PATH"
+fi
 xcrun notarytool submit "$DMG_PATH" \
-  --apple-id    "$APPLE_NOTARY_USER" \
-  --password    "$APPLE_NOTARY_PASSWORD" \
-  --team-id     "$APPLE_NOTARY_TEAM_ID" \
+  "${NOTARY_ARGS[@]}" \
   --wait
 xcrun stapler staple "$DMG_PATH"
 

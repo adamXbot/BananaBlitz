@@ -1,7 +1,11 @@
 name: CI
 
-# Tests-only. Release builds (signing, notarization, DMG, appcast) live
-# in release.yml and are triggered by `v*` tag pushes.
+# Thin caller for the shared push/PR pipeline (unsigned build + tests,
+# zero secrets). The reusable workflow was generalised from this repo's
+# previous ci.yml, so behaviour is unchanged apart from deliberately
+# dropped decoration (xcpretty, showdestinations-on-failure) — the
+# uploaded xcresult bundle carries everything those printed.
+# Release builds live in release.yml, triggered by `v*` tag pushes.
 
 on:
   push:
@@ -9,53 +13,20 @@ on:
   pull_request:
     branches: [main]
 
+# Deliberate duplication of the called workflow's concurrency: GitHub
+# evaluates workflow-level concurrency of a *called* workflow
+# inconsistently, so both sides declare it.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ci-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+
 jobs:
-  build-and-test:
-    name: Build & Test
-    runs-on: macos-15
-    timeout-minutes: 20
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-
-      - name: Select Xcode
-        uses: maxim-lobanov/setup-xcode@v1
-        with:
-          xcode-version: latest-stable
-
-      - name: Show toolchain versions
-        run: |
-          xcodebuild -version
-          swift --version
-
-      - name: Install xcodegen
-        run: brew install xcodegen
-
-      - name: Generate Xcode project
-        run: xcodegen generate
-
-      - name: Build & test
-        run: |
-          set -o pipefail
-          xcodebuild test \
-            -scheme BananaBlitz \
-            -destination 'platform=macOS' \
-            -configuration Debug \
-            -resultBundlePath TestResults.xcresult \
-            CODE_SIGN_IDENTITY="-" \
-            CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGNING_ALLOWED=NO \
-            | xcpretty || (xcodebuild -showdestinations -scheme BananaBlitz; exit 1)
-
-      - name: Upload test results
-        if: always()
-        uses: actions/upload-artifact@v7
-        with:
-          name: test-results
-          path: TestResults.xcresult
-          retention-days: 7
+  ci:
+    uses: privacykey/gh-workflows/.github/workflows/macos-app-ci.yml@v1
+    with:
+      xcodeproj: BananaBlitz.xcodeproj
+      scheme: BananaBlitz
+      uses_xcodegen: true
