@@ -124,6 +124,10 @@ struct TargetListView: View {
                 )
         }
         .buttonStyle(.plain)
+        // The pills are emoji-only (🟢/🟡/🔴), so give VoiceOver / colourblind
+        // users a real label and convey selection without relying on colour.
+        .accessibilityLabel(level?.displayName ?? "All levels")
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 
     // MARK: - Helpers

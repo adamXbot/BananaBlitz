@@ -63,11 +63,20 @@ struct TargetRowView: View {
                 .toggleStyle(.switch)
                 .controlSize(.small)
                 .labelsHidden()
+
+                // Disclosure affordance — signals the row expands to reveal
+                // the side-effect, path, and strategy.
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 9, weight: .semibold))
+                    .foregroundStyle(.tertiary)
+                    .rotationEffect(.degrees(isExpanded ? 90 : 0))
+                    .accessibilityHidden(true)
             }
             .padding(.horizontal, 10)
             .padding(.vertical, 8)
             .contentShape(Rectangle())
             .onTapGesture { withAnimation(.easeInOut(duration: 0.2)) { isExpanded.toggle() } }
+            .accessibilityHint(isExpanded ? "Collapse details" : "Show side-effect, path, and strategy")
 
             // Expanded detail
             if isExpanded {

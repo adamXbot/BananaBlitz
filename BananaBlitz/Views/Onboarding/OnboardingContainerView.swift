@@ -14,6 +14,10 @@ struct OnboardingContainerView: View {
 
     @State private var scanResults: [String: Int64] = [:]
     @State private var isScanning = false
+    /// Lets a hesitant user move past the Full Disk Access step without
+    /// granting it (they can grant later from Settings) rather than being
+    /// dead-ended on an endless "Waiting…" spinner.
+    @State private var fdaSkipped = false
 
     private let totalSteps = 7
 
@@ -103,6 +107,19 @@ struct OnboardingContainerView: View {
 
             Spacer()
 
+            if currentStep == 1 && !appState.fullDiskAccessGranted {
+                Button("Skip for now") {
+                    withAnimation(.easeInOut(duration: 0.3)) {
+                        fdaSkipped = true
+                        handleNext()
+                    }
+                }
+                .buttonStyle(.plain)
+                .font(.system(size: 11))
+                .foregroundStyle(.secondary)
+                .padding(.trailing, 4)
+            }
+
             if currentStep < totalSteps - 1 {
                 Button {
                     withAnimation(.easeInOut(duration: 0.3)) {
@@ -124,6 +141,7 @@ struct OnboardingContainerView: View {
                     .foregroundStyle(.black)
                 }
                 .buttonStyle(.plain)
+                .keyboardShortcut(.defaultAction)
                 .disabled(!canProceed)
             } else {
                 Button {
@@ -158,7 +176,7 @@ struct OnboardingContainerView: View {
 
     private var canProceed: Bool {
         switch currentStep {
-        case 1: return appState.fullDiskAccessGranted
+        case 1: return appState.fullDiskAccessGranted || fdaSkipped
         case 2: return !isScanning
         default: return true
         }
@@ -166,7 +184,7 @@ struct OnboardingContainerView: View {
 
     private var nextButtonTitle: String {
         switch currentStep {
-        case 1: return appState.fullDiskAccessGranted ? "Continue" : "Waiting..."
+        case 1: return (appState.fullDiskAccessGranted || fdaSkipped) ? "Continue" : "Waiting..."
         case 2: return isScanning ? "Scanning..." : "Continue"
         default: return "Continue"
         }

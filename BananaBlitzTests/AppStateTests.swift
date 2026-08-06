@@ -14,6 +14,7 @@ final class AppStateTests: XCTestCase {
         StorageKey.launchAtLogin,
         StorageKey.isPaused,
         StorageKey.showMenuBarStatus,
+        StorageKey.menuBarIconStyleRaw,
         StorageKey.enableKeyboardShortcut,
         StorageKey.globalStrategyRaw,
     ]
@@ -34,8 +35,18 @@ final class AppStateTests: XCTestCase {
     }
 
     override func tearDownWithError() throws {
-        if let url = tempURL, FileManager.default.fileExists(atPath: url.path) {
-            try? FileManager.default.removeItem(at: url)
+        if let url = tempURL {
+            if FileManager.default.fileExists(atPath: url.path) {
+                try? FileManager.default.removeItem(at: url)
+            }
+            // Remove any `*.corrupt-*` backups left by the corrupt-load test.
+            let dir = url.deletingLastPathComponent()
+            let prefix = url.lastPathComponent + ".corrupt-"
+            if let siblings = try? FileManager.default.contentsOfDirectory(atPath: dir.path) {
+                for name in siblings where name.hasPrefix(prefix) {
+                    try? FileManager.default.removeItem(at: dir.appendingPathComponent(name))
+                }
+            }
         }
         tempURL = nil
         clearUserDefaults()
@@ -133,6 +144,81 @@ final class AppStateTests: XCTestCase {
         XCTAssertTrue(state.enabledTargetIDs.isEmpty)
         XCTAssertEqual(state.totalBytesReclaimed, 0)
         XCTAssertNil(state.lastCleanDate)
+    }
+
+    func test_load_preservesUnreadableStateInsteadOfDestroyingIt() throws {
+        // A file that exists but won't decode as PersistedData.
+        let garbage = Data("this is not valid PersistedData json".utf8)
+        try garbage.write(to: tempURL)
+
+        // Loading falls back to defaults without crashing...
+        let state = makeState()
+        XCTAssertTrue(state.enabledTargetIDs.isEmpty)
+        XCTAssertEqual(state.totalBytesReclaimed, 0)
+
+        // ...and preserves the original bytes in a sibling backup.
+        let dir = tempURL.deletingLastPathComponent()
+        let backups = try FileManager.default.contentsOfDirectory(atPath: dir.path)
+            .filter { $0.hasPrefix(tempURL.lastPathComponent + ".corrupt-") }
+        XCTAssertEqual(backups.count, 1, "expected exactly one corrupt-state backup")
+        let backupURL = dir.appendingPathComponent(backups[0])
+        XCTAssertEqual(try Data(contentsOf: backupURL), garbage,
+                       "original bytes must be preserved, not destroyed")
+
+        // A subsequent save writes fresh state to the live path and leaves the
+        // preserved backup untouched — the original data-loss bug is gone.
+        state.setDefaultTargets(for: .basic)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: tempURL.path))
+        XCTAssertEqual(try Data(contentsOf: backupURL), garbage)
+    }
+
+    func test_load_blocksSaveWhenPriorStateIsUnreadable() throws {
+        // A path that exists but can't be read as a state file (here: a
+        // directory). loadPersistedData must not crash, and a later save must
+        // NOT replace it — overwriting an un-preserved file would silently
+        // destroy whatever is there.
+        try FileManager.default.createDirectory(at: tempURL, withIntermediateDirectories: true)
+
+        let state = makeState()
+        XCTAssertTrue(state.enabledTargetIDs.isEmpty)
+
+        state.setDefaultTargets(for: .basic) // triggers savePersistedData
+
+        var isDir: ObjCBool = false
+        XCTAssertTrue(FileManager.default.fileExists(atPath: tempURL.path, isDirectory: &isDir))
+        XCTAssertTrue(isDir.boolValue, "save must be blocked; the unreadable path must be left intact")
+    }
+
+    func test_cleaningMutex_isExclusive() {
+        let state = makeState()
+        XCTAssertTrue(state.beginCleaningIfIdle(), "first acquire should succeed")
+        XCTAssertTrue(state.isCurrentlyCleaning)
+        XCTAssertFalse(state.beginCleaningIfIdle(), "second acquire must fail while in flight")
+        state.endCleaning()
+        XCTAssertFalse(state.isCurrentlyCleaning)
+        XCTAssertTrue(state.beginCleaningIfIdle(), "acquire should succeed again after release")
+        state.endCleaning()
+    }
+
+    func test_menuBarIconStyle_defaultsToMonochromeBanana() {
+        let state = makeState()
+        XCTAssertEqual(state.menuBarIconStyle, .bananaMono)
+    }
+
+    func test_menuBarIconStyle_persistsSelection() {
+        let state = makeState()
+        state.menuBarIconStyle = .sparkles
+        XCTAssertEqual(state.menuBarIconStyle, .sparkles)
+        XCTAssertEqual(
+            UserDefaults.standard.string(forKey: StorageKey.menuBarIconStyleRaw),
+            MenuBarIconStyle.sparkles.rawValue
+        )
+    }
+
+    func test_menuBarIconStyle_unknownRawFallsBackToMonochromeBanana() {
+        UserDefaults.standard.set("not-a-real-style", forKey: StorageKey.menuBarIconStyleRaw)
+        let state = makeState()
+        XCTAssertEqual(state.menuBarIconStyle, .bananaMono)
     }
 
     func test_persistence_roundTripsAcrossInstances() {

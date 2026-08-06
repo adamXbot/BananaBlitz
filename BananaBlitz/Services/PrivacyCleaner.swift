@@ -10,27 +10,47 @@ struct CleaningJob {
     let strategy: CleaningStrategy
 }
 
+/// The cleaning back-end the scheduler drives. Abstracted so a spy can be
+/// injected in tests, letting the real async clean/complete/release path run
+/// without touching `~/Library`.
+protocol CleaningEngine {
+    func cleanAll(jobs: [CleaningJob]) -> [CleaningResult]
+}
+
 /// Core cleaning engine that executes cleaning operations on privacy targets.
 ///
 /// All public functions are pure with respect to global mutable state — the
 /// caller is responsible for snapshotting the current set of enabled targets
 /// and their strategies on the main thread before dispatching here.
-final class PrivacyCleaner {
+final class PrivacyCleaner: CleaningEngine {
     static let shared = PrivacyCleaner()
 
-    private let fileManager = FileManager.default
+    private let fileManager: FileManager
+    private let guardService: FileSystemGuard
+    private let libraryRoot: String
     private let log = AppLog.cleaner
+
+    init(
+        libraryRoot: String = PathSafety.defaultLibraryRoot,
+        fileManager: FileManager = .default,
+        guardService: FileSystemGuard? = nil
+    ) {
+        self.libraryRoot = libraryRoot
+        self.fileManager = fileManager
+        self.guardService = guardService ?? FileSystemGuard(libraryRoot: libraryRoot)
+    }
 
     /// Execute a cleaning operation on a single target with the given strategy.
     func clean(target: PrivacyTarget, strategy: CleaningStrategy) -> CleaningResult {
-        let startSize = TargetScanner.shared.targetSize(target)
-
         do {
+            try PathSafety.validateTargetPath(target.resolvedPath, libraryRoot: libraryRoot)
+            let startSize = TargetScanner.shared.targetSize(target)
+
             switch strategy {
             case .wipeContents:
                 try wipeContents(of: target)
             case .replaceWithFile:
-                try FileSystemGuard.shared.lockTarget(target)
+                try guardService.lockTarget(target)
             case .deleteDatabases:
                 try deleteDatabases(in: target)
             }
@@ -66,11 +86,12 @@ final class PrivacyCleaner {
     /// itself, not the target), but never followed.
     private func wipeContents(of target: PrivacyTarget) throws {
         let path = target.resolvedPath
+        try PathSafety.validateTargetPath(path, libraryRoot: libraryRoot)
 
         if target.isSpecificFile {
             if fileManager.fileExists(atPath: path) {
-                if FileSystemGuard.shared.isLocked(target) {
-                    try FileSystemGuard.shared.unlockTarget(target)
+                if guardService.isLocked(target) {
+                    try guardService.unlockTarget(target)
                 } else {
                     try fileManager.removeItem(atPath: path)
                 }
@@ -80,16 +101,8 @@ final class PrivacyCleaner {
 
         guard fileManager.fileExists(atPath: path) else { return }
 
-        if FileSystemGuard.shared.isLocked(target) {
-            try FileSystemGuard.shared.unlockTarget(target)
-            return
-        }
-
-        // Refuse to wipe contents if the path itself is a symlink — that
-        // would mean we're chasing a link out of the target's tree.
-        let url = URL(fileURLWithPath: path)
-        if (try? url.resourceValues(forKeys: [.isSymbolicLinkKey]))?.isSymbolicLink == true {
-            log.error("Refusing to wipe symlink at \(path, privacy: .public)")
+        if guardService.isLocked(target) {
+            try guardService.unlockTarget(target)
             return
         }
 
@@ -98,8 +111,7 @@ final class PrivacyCleaner {
             let itemPath = (path as NSString).appendingPathComponent(item)
             // `removeItem` only removes the link itself for symlinks, but
             // log the case so suspicious filesystem layouts are visible.
-            let itemURL = URL(fileURLWithPath: itemPath)
-            if (try? itemURL.resourceValues(forKeys: [.isSymbolicLinkKey]))?.isSymbolicLink == true {
+            if PathSafety.isSymbolicLink(at: itemPath) {
                 log.debug("Removing symlink (not following): \(itemPath, privacy: .public)")
             }
             try fileManager.removeItem(atPath: itemPath)
@@ -110,12 +122,13 @@ final class PrivacyCleaner {
     private func deleteDatabases(in target: PrivacyTarget) throws {
         let path = target.resolvedPath
         let dbExtensions: Set<String> = ["db", "sqlite", "sqlite3", "sqlite-shm", "sqlite-wal", "segb"]
+        try PathSafety.validateTargetPath(path, libraryRoot: libraryRoot)
 
         if target.isSpecificFile {
             let ext = (path as NSString).pathExtension.lowercased()
             if dbExtensions.contains(ext) && fileManager.fileExists(atPath: path) {
-                if FileSystemGuard.shared.isLocked(target) {
-                    try FileSystemGuard.shared.unlockTarget(target)
+                if guardService.isLocked(target) {
+                    try guardService.unlockTarget(target)
                 } else {
                     try fileManager.removeItem(atPath: path)
                 }
@@ -125,17 +138,31 @@ final class PrivacyCleaner {
 
         guard fileManager.fileExists(atPath: path) else { return }
 
-        if FileSystemGuard.shared.isLocked(target) {
-            try FileSystemGuard.shared.unlockTarget(target)
+        if guardService.isLocked(target) {
+            try guardService.unlockTarget(target)
             return
         }
 
-        guard let enumerator = fileManager.enumerator(atPath: path) else { return }
-        while let file = enumerator.nextObject() as? String {
-            let ext = (file as NSString).pathExtension.lowercased()
+        let root = URL(fileURLWithPath: path, isDirectory: true)
+        let keys: [URLResourceKey] = [.isSymbolicLinkKey, .isRegularFileKey]
+        guard let enumerator = fileManager.enumerator(
+            at: root,
+            includingPropertiesForKeys: keys,
+            options: [.skipsPackageDescendants]
+        ) else { return }
+
+        for case let fileURL as URL in enumerator {
+            let values = try? fileURL.resourceValues(forKeys: Set(keys))
+            if values?.isSymbolicLink == true {
+                log.debug("Skipping database-looking symlink: \(fileURL.path, privacy: .public)")
+                continue
+            }
+            guard values?.isRegularFile == true else { continue }
+
+            let ext = fileURL.pathExtension.lowercased()
             if dbExtensions.contains(ext) {
-                let fullPath = (path as NSString).appendingPathComponent(file)
-                try fileManager.removeItem(atPath: fullPath)
+                try PathSafety.assertInsideLibrary(fileURL.path, libraryRoot: libraryRoot)
+                try fileManager.removeItem(at: fileURL)
             }
         }
     }

@@ -5,6 +5,10 @@ struct MenuBarView: View {
     @EnvironmentObject var appState: AppState
     @EnvironmentObject var scheduler: SchedulerService
     @Environment(\.openWindow) private var openWindow
+    @State private var pendingCleanReports: [DryRunReport] = []
+    @State private var cleanConfirmationPresented = false
+    @State private var isPreparingCleanPreview = false
+    @State private var cleanOutcome: CleanOutcome?
 
     var body: some View {
         VStack(spacing: 0) {
@@ -35,6 +39,29 @@ struct MenuBarView: View {
         }
         .frame(width: 320)
         .background(Color(.windowBackgroundColor))
+        .sheet(isPresented: $cleanConfirmationPresented) {
+            DryRunSheet(
+                reports: pendingCleanReports,
+                title: "Confirm Blitz",
+                confirmTitle: "Blitz Now",
+                confirmRole: .destructive,
+                onClose: { cleanConfirmationPresented = false },
+                onConfirm: {
+                    cleanConfirmationPresented = false
+                    scheduler.performManualClean { results in
+                        // Empty means the run was skipped (another clean in
+                        // flight); don't overwrite the last real outcome.
+                        guard !results.isEmpty else { return }
+                        let succeeded = results.filter(\.success).count
+                        cleanOutcome = CleanOutcome(
+                            succeeded: succeeded,
+                            failed: results.count - succeeded,
+                            bytes: results.reduce(Int64(0)) { $0 + $1.bytesReclaimed }
+                        )
+                    }
+                }
+            )
+        }
     }
 
     // MARK: - Header
@@ -94,11 +121,15 @@ struct MenuBarView: View {
     private var actionSection: some View {
         VStack(spacing: 8) {
             CleanButton(
-                title: appState.isCurrentlyCleaning ? "Cleaning..." : "🍌 Blitz Now",
+                title: cleanButtonTitle,
                 icon: "bolt.fill",
-                isLoading: appState.isCurrentlyCleaning
+                isLoading: appState.isCurrentlyCleaning || isPreparingCleanPreview
             ) {
-                scheduler.performManualClean { _ in }
+                prepareManualClean()
+            }
+
+            if let outcome = cleanOutcome, !appState.isCurrentlyCleaning {
+                cleanOutcomeRow(outcome)
             }
 
             // Schedule toggle
@@ -239,5 +270,68 @@ struct MenuBarView: View {
         if elapsed < interval { return .green }
         if elapsed < interval * 2 { return .orange }
         return .red
+    }
+
+    private var cleanButtonTitle: String {
+        if appState.isCurrentlyCleaning { return "Cleaning..." }
+        if isPreparingCleanPreview { return "Previewing..." }
+        return "🍌 Blitz Now"
+    }
+
+    /// Inline result of the last manual blitz, so failures aren't invisible
+    /// from the menu bar (the Dashboard banner is otherwise the only signal).
+    @ViewBuilder
+    private func cleanOutcomeRow(_ outcome: CleanOutcome) -> some View {
+        HStack(spacing: 6) {
+            Image(systemName: outcome.failed == 0 ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
+                .font(.system(size: 11))
+                .foregroundStyle(outcome.failed == 0 ? .green : .orange)
+
+            if outcome.failed == 0 {
+                Text("Cleaned \(outcome.succeeded) · \(outcome.bytes.formattedBytes) reclaimed")
+                    .font(.system(size: 10))
+                    .foregroundStyle(.secondary)
+                Spacer()
+            } else {
+                Text("\(outcome.succeeded) cleaned · \(outcome.failed) failed")
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundStyle(.orange)
+                Spacer()
+                Button("Details") {
+                    openWindow(id: "settings")
+                    AppActivator.shared.bringWindowForward(titled: "BananaBlitz Settings")
+                }
+                .buttonStyle(.plain)
+                .font(.system(size: 10, weight: .semibold))
+                .foregroundStyle(.blue)
+            }
+        }
+        .transition(.opacity)
+    }
+
+    /// Summary of the most recent manual blitz, shown inline in the popover.
+    private struct CleanOutcome {
+        let succeeded: Int
+        let failed: Int
+        let bytes: Int64
+    }
+
+    private func prepareManualClean() {
+        guard !appState.isCurrentlyCleaning, !isPreparingCleanPreview else { return }
+
+        let jobs = appState.snapshotCleaningJobs()
+        guard !jobs.isEmpty else { return }
+
+        cleanOutcome = nil // clear the previous run's result
+
+        isPreparingCleanPreview = true
+        Task.detached(priority: .userInitiated) {
+            let reports = DryRun.plan(jobs: jobs)
+            await MainActor.run {
+                pendingCleanReports = reports
+                isPreparingCleanPreview = false
+                cleanConfirmationPresented = true
+            }
+        }
     }
 }

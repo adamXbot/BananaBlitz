@@ -3,6 +3,7 @@ import SwiftUI
 /// Step 5: Execute the initial clean with a satisfying animation.
 struct CleanStepView: View {
     @EnvironmentObject var appState: AppState
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let scanResults: [String: Int64]
 
     @State private var isCleaning = false
@@ -12,6 +13,9 @@ struct CleanStepView: View {
     @State private var totalReclaimed: Int64 = 0
     @State private var currentTarget: String = ""
     @State private var results: [CleaningResult] = []
+    @State private var dryRunReports: [DryRunReport] = []
+    @State private var confirmationPresented = false
+    @State private var isPreparingPreview = false
 
     var body: some View {
         VStack(spacing: 24) {
@@ -28,6 +32,19 @@ struct CleanStepView: View {
             Spacer()
         }
         .padding(24)
+        .sheet(isPresented: $confirmationPresented) {
+            DryRunSheet(
+                reports: dryRunReports,
+                title: "Confirm First Blitz",
+                confirmTitle: "Blitz It",
+                confirmRole: .destructive,
+                onClose: { confirmationPresented = false },
+                onConfirm: {
+                    confirmationPresented = false
+                    startCleaning()
+                }
+            )
+        }
     }
 
     // MARK: - Ready State
@@ -50,11 +67,16 @@ struct CleanStepView: View {
                     .foregroundStyle(.secondary)
             }
 
+            // Reflect the shared clean mutex: if a scheduled/catch-up clean is
+            // running, show the button as busy and disabled rather than letting
+            // a tap silently no-op (and the user think the first clean ran).
+            let busy = appState.isCurrentlyCleaning
             CleanButton(
-                title: "🍌 Blitz It!",
-                icon: "bolt.fill"
+                title: busy ? "Cleaning…" : (isPreparingPreview ? "Previewing..." : "🍌 Blitz It!"),
+                icon: "bolt.fill",
+                isLoading: isPreparingPreview || busy
             ) {
-                startCleaning()
+                prepareConfirmation()
             }
             .frame(width: 200)
         }
@@ -64,14 +86,15 @@ struct CleanStepView: View {
 
     private var cleaningView: some View {
         VStack(spacing: 20) {
-            // Animated banana
+            // Animated banana — spin is suppressed under Reduce Motion.
             Text("🍌")
                 .font(.system(size: 60))
-                .rotationEffect(.degrees(isCleaning ? 360 : 0))
+                .rotationEffect(.degrees(reduceMotion ? 0 : (isCleaning ? 360 : 0)))
                 .animation(
-                    .linear(duration: 2).repeatForever(autoreverses: false),
+                    reduceMotion ? nil : .linear(duration: 2).repeatForever(autoreverses: false),
                     value: isCleaning
                 )
+                .accessibilityHidden(true)
 
             VStack(spacing: 8) {
                 Text("Cleaning in progress...")
@@ -171,7 +194,32 @@ struct CleanStepView: View {
 
     // MARK: - Actions
 
+    private func prepareConfirmation() {
+        guard !isPreparingPreview else { return }
+        // Don't open the confirm sheet while another clean holds the mutex —
+        // startCleaning would acquire-fail and the tap would do nothing.
+        guard !appState.isCurrentlyCleaning else { return }
+
+        let jobs = appState.snapshotCleaningJobs()
+        isPreparingPreview = true
+
+        DispatchQueue.global(qos: .userInitiated).async {
+            let reports = DryRun.plan(jobs: jobs)
+            DispatchQueue.main.async {
+                dryRunReports = reports
+                isPreparingPreview = false
+                confirmationPresented = true
+            }
+        }
+    }
+
     private func startCleaning() {
+        // Acquire the shared clean mutex so this first-run clean can't race a
+        // scheduled / catch-up clean against the same ~/Library paths.
+        guard appState.beginCleaningIfIdle() else {
+            AppLog.app.debug("Onboarding clean skipped: another clean is already running")
+            return
+        }
         isCleaning = true
 
         // Snapshot the workload on the main thread so the background task
@@ -211,6 +259,8 @@ struct CleanStepView: View {
                         appState.addResult(result)
                     }
                 }
+                // Release the shared clean mutex acquired in startCleaning().
+                appState.endCleaning()
             }
         }
     }

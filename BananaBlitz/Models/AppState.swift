@@ -53,6 +53,27 @@ enum ScheduleInterval: Double, CaseIterable, Codable, Identifiable {
     }
 }
 
+/// Which glyph is shown in the macOS menu bar. The colour banana is the
+/// classic brand mark but never adapts to the menu bar's appearance; the
+/// monochrome banana and the SF Symbol render as *template* images, so the
+/// system tints them black-in-light / white-in-dark (and inverts them while
+/// the menu is open) to match the surrounding menu bar.
+enum MenuBarIconStyle: String, CaseIterable, Codable, Identifiable {
+    case banana
+    case bananaMono
+    case sparkles
+
+    var id: String { rawValue }
+
+    var displayName: String {
+        switch self {
+        case .banana:     return "Banana (colour)"
+        case .bananaMono: return "Banana (mono)"
+        case .sparkles:   return "Sparkles"
+        }
+    }
+}
+
 // MARK: - Storage Keys
 
 /// Centralised AppStorage keys to avoid drift on rename.
@@ -65,8 +86,10 @@ enum StorageKey {
     static let launchAtLogin          = "launchAtLogin"
     static let isPaused               = "isPaused"
     static let showMenuBarStatus      = "showMenuBarStatus"
+    static let menuBarIconStyleRaw    = "menuBarIconStyleRaw"
     static let enableKeyboardShortcut = "enableKeyboardShortcut"
     static let globalStrategyRaw      = "globalStrategyRaw"
+    static let allowAggressiveScheduledClean = "allowAggressiveScheduledClean"
 }
 
 // MARK: - App State
@@ -84,8 +107,16 @@ class AppState: ObservableObject {
     @AppStorage(StorageKey.launchAtLogin)          var launchAtLogin: Bool = false
     @AppStorage(StorageKey.isPaused)               var isPaused: Bool = false
     @AppStorage(StorageKey.showMenuBarStatus)      var showMenuBarStatus: Bool = true
+    @AppStorage(StorageKey.menuBarIconStyleRaw)    var menuBarIconStyleRaw: String = MenuBarIconStyle.bananaMono.rawValue
     @AppStorage(StorageKey.enableKeyboardShortcut) var enableKeyboardShortcut: Bool = false
     @AppStorage(StorageKey.globalStrategyRaw)      var globalStrategyRaw: String = CleaningStrategy.wipeContents.rawValue
+
+    /// Opt-in: allow unattended scheduled/catch-up cleans to run the destructive
+    /// "Lock with Immutable File" strategy. Off by default — scheduled cleans
+    /// have no confirmation gate, so by default any aggressive strategy is
+    /// downgraded to a non-destructive wipe for unattended runs. See
+    /// `SchedulerService.sanitiseForUnattendedRun`.
+    @AppStorage(StorageKey.allowAggressiveScheduledClean) var allowAggressiveScheduledClean: Bool = false
 
     // MARK: Published State
 
@@ -126,6 +157,11 @@ class AppState: ObservableObject {
     var notificationStyle: NotificationStyle {
         get { NotificationStyle(rawValue: notificationStyleRaw) ?? .summary }
         set { notificationStyleRaw = newValue.rawValue }
+    }
+
+    var menuBarIconStyle: MenuBarIconStyle {
+        get { MenuBarIconStyle(rawValue: menuBarIconStyleRaw) ?? .bananaMono }
+        set { menuBarIconStyleRaw = newValue.rawValue }
     }
 
     var globalStrategy: CleaningStrategy {
@@ -215,6 +251,23 @@ class AppState: ObservableObject {
         savePersistedData()
     }
 
+    /// Acquire the single "a clean is running" mutex. Both the scheduler and
+    /// the onboarding first-run clean must call this before starting work so
+    /// two cleans can never operate on the same `~/Library` paths
+    /// concurrently. Returns `false` if a clean is already in flight.
+    /// **Main-thread only** (mutates `@Published` state).
+    func beginCleaningIfIdle() -> Bool {
+        guard !isCurrentlyCleaning else { return false }
+        isCurrentlyCleaning = true
+        return true
+    }
+
+    /// Release the clean mutex acquired by `beginCleaningIfIdle()`.
+    /// **Main-thread only.**
+    func endCleaning() {
+        isCurrentlyCleaning = false
+    }
+
     /// Build a snapshot of the current cleaning workload. **Must be called on
     /// the main thread** before dispatching to a background queue, so the
     /// background work never touches `@Published` state.
@@ -242,6 +295,14 @@ class AppState: ObservableObject {
     // MARK: - Persistence (JSON file for complex data)
 
     private let persistenceURL: URL?
+
+    /// Set when a prior state file existed but could not be read *or* preserved
+    /// (moved/copied aside). While set, `savePersistedData` refuses to write —
+    /// overwriting an un-preserved file would silently destroy the user's only
+    /// copy, which is exactly the data-loss the corrupt-state handling guards
+    /// against. Stays set for the lifetime of this instance; a relaunch
+    /// re-attempts the load.
+    private var persistenceDisabled = false
 
     /// Default production location: `~/Library/Application Support/BananaBlitz/state.json`.
     /// Returns `nil` if Application Support can't be resolved or the directory
@@ -271,6 +332,10 @@ class AppState: ObservableObject {
 
     func savePersistedData() {
         guard let url = persistenceURL else { return }
+        guard !persistenceDisabled else {
+            AppLog.state.error("Refusing to save: a prior unreadable state file could not be preserved, so \(url.lastPathComponent, privacy: .public) is left untouched.")
+            return
+        }
 
         let data = PersistedData(
             enabledTargetIDs: enabledTargetIDs,
@@ -288,8 +353,21 @@ class AppState: ObservableObject {
     }
 
     func loadPersistedData() {
-        guard let url = persistenceURL,
-              let raw = try? Data(contentsOf: url) else { return }
+        guard let url = persistenceURL else { return }
+        // Genuinely-absent file → clean first run. Nothing to protect.
+        guard FileManager.default.fileExists(atPath: url.path) else { return }
+
+        let raw: Data
+        do {
+            raw = try Data(contentsOf: url)
+        } catch {
+            // The file exists but can't even be read (a directory, an ACL
+            // hiccup, a transient I/O error). We can't preserve bytes we can't
+            // read, so block saving rather than let the next write clobber it.
+            AppLog.state.error("Could not read state file: \(error.localizedDescription, privacy: .public)")
+            persistenceDisabled = true
+            return
+        }
 
         do {
             let persisted = try JSONDecoder().decode(PersistedData.self, from: raw)
@@ -300,6 +378,40 @@ class AppState: ObservableObject {
             totalBytesReclaimed = persisted.totalBytesReclaimed
         } catch {
             AppLog.state.error("Failed to decode persisted state: \(error.localizedDescription, privacy: .public)")
+            // The file exists but won't decode (corruption, or a schema we no
+            // longer understand). Preserve it before the next save can
+            // overwrite `url` with empty defaults — otherwise one bad byte
+            // silently destroys the user's history and reclaimed-bytes total.
+            if !backUpUnreadableState(raw, at: url) {
+                // Couldn't preserve it at all — refuse to overwrite so a save
+                // can't destroy the user's only copy.
+                persistenceDisabled = true
+            }
+        }
+    }
+
+    /// Preserve an undecodable state file by moving it to a unique sibling
+    /// (which also frees `url` for a clean save). If the move fails, fall back
+    /// to writing the in-memory bytes we already read — either route preserves
+    /// the data. Returns `false` only if neither succeeds.
+    private func backUpUnreadableState(_ raw: Data, at url: URL) -> Bool {
+        let stamp = Int(Date().timeIntervalSince1970)
+        let backup = url.deletingLastPathComponent()
+            .appendingPathComponent("\(url.lastPathComponent).corrupt-\(stamp)-\(UUID().uuidString)")
+        do {
+            try FileManager.default.moveItem(at: url, to: backup)
+            AppLog.state.error("Preserved unreadable state at \(backup.lastPathComponent, privacy: .public)")
+            return true
+        } catch {
+            AppLog.state.error("Could not move unreadable state aside (\(error.localizedDescription, privacy: .public)); trying a copy")
+        }
+        do {
+            try raw.write(to: backup, options: .atomic)
+            AppLog.state.error("Preserved a copy of unreadable state at \(backup.lastPathComponent, privacy: .public)")
+            return true
+        } catch {
+            AppLog.state.error("Failed to preserve unreadable state: \(error.localizedDescription, privacy: .public)")
+            return false
         }
     }
 

@@ -25,6 +25,18 @@ enum DryRun {
             let target = job.target
             let path = target.resolvedPath
 
+            do {
+                try PathSafety.validateTargetPath(path)
+            } catch {
+                return DryRunReport(
+                    target: target,
+                    strategy: job.strategy,
+                    bytesAtRisk: 0,
+                    itemsAtRisk: 0,
+                    action: "Blocked: \(error.localizedDescription)"
+                )
+            }
+
             switch job.strategy {
             case .replaceWithFile:
                 let size = TargetScanner.shared.targetSize(target)
@@ -61,12 +73,18 @@ enum DryRun {
                         }
                         count = 1
                     }
-                } else if let enumerator = fm.enumerator(atPath: path) {
-                    while let file = enumerator.nextObject() as? String {
-                        let ext = (file as NSString).pathExtension.lowercased()
+                } else if let enumerator = fm.enumerator(
+                    at: URL(fileURLWithPath: path, isDirectory: true),
+                    includingPropertiesForKeys: [.isSymbolicLinkKey, .isRegularFileKey],
+                    options: [.skipsPackageDescendants]
+                ) {
+                    for case let fileURL as URL in enumerator {
+                        let values = try? fileURL.resourceValues(forKeys: [.isSymbolicLinkKey, .isRegularFileKey])
+                        guard values?.isSymbolicLink != true, values?.isRegularFile == true else { continue }
+
+                        let ext = fileURL.pathExtension.lowercased()
                         guard dbExtensions.contains(ext) else { continue }
-                        let full = (path as NSString).appendingPathComponent(file)
-                        if let attrs = try? fm.attributesOfItem(atPath: full),
+                        if let attrs = try? fm.attributesOfItem(atPath: fileURL.path),
                            let size = attrs[.size] as? Int64 {
                             bytes += size
                         }

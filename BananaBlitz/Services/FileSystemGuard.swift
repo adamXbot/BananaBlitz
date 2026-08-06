@@ -15,49 +15,122 @@ final class FileSystemGuard {
     private let log = AppLog.guardLog
     private let libraryRoot: String
 
+    /// Test seam: when non-nil, immutable-flag toggling routes through this
+    /// closure instead of `URLResourceValues`. Lets tests simulate a
+    /// `chflags` failure (e.g. a hardened path) to exercise the crash-safe
+    /// restore path in `lockTarget`. `nil` in production.
+    private let immutableFlagSetter: ((String, Bool) throws -> Void)?
+
+    /// Test seam: when non-nil, lock-file creation routes through this closure
+    /// instead of `FileManager.createFile`. Lets tests simulate the
+    /// `createFile == false` branch to exercise the restore path. `nil` in
+    /// production.
+    private let lockFileCreator: ((String) throws -> Void)?
+
     /// `libraryRoot` defaults to `~/Library` and is overridable for tests so
     /// the path-safety guard can be exercised against a temporary directory.
-    init(libraryRoot: String = (NSHomeDirectory() as NSString).appendingPathComponent("Library")) {
+    init(
+        libraryRoot: String = (NSHomeDirectory() as NSString).appendingPathComponent("Library"),
+        immutableFlagSetter: ((String, Bool) throws -> Void)? = nil,
+        lockFileCreator: ((String) throws -> Void)? = nil
+    ) {
         self.libraryRoot = libraryRoot
+        self.immutableFlagSetter = immutableFlagSetter
+        self.lockFileCreator = lockFileCreator
     }
 
     // MARK: - Lock / Unlock
 
     /// Replace a target directory with an immutable empty file.
+    ///
+    /// Crash-safe: the original is moved aside to a sibling backup, the empty
+    /// lock file is created and flagged, and only then is the backup deleted.
+    /// If *any* step fails the original is moved back, so a partial failure
+    /// (disk full, the daemon racing us, a `chflags` denial) can never leave
+    /// the user with destroyed data and no replacement — the previous
+    /// "delete first, create second" ordering could.
     func lockTarget(_ target: PrivacyTarget) throws {
-        try assertInsideLibrary(target.resolvedPath)
         let path = target.resolvedPath
+        try PathSafety.validateTargetPath(path, libraryRoot: libraryRoot)
 
-        // Refuse to operate on a symlink — that would follow the link out
-        // of the target's tree.
-        let url = URL(fileURLWithPath: path)
-        if let values = try? url.resourceValues(forKeys: [.isSymbolicLinkKey]),
-           values.isSymbolicLink == true {
-            throw BananaBlitzError.refusedSymlink(path)
-        }
-
-        // Remove existing directory or file
-        if fileManager.fileExists(atPath: path) {
-            // If already locked (is a file with uchg), remove flag first
-            if isLocked(target) {
-                try setImmutableFlag(at: path, immutable: false)
+        // Nothing here yet — no data to protect, so create the lock directly.
+        // Still clean up a stray stub if flag-setting fails, so a failure never
+        // leaves a bogus non-immutable file occupying the path.
+        guard fileManager.fileExists(atPath: path) else {
+            do {
+                try createLockFile(at: path)
+            } catch {
+                try? fileManager.removeItem(atPath: path)
+                throw error
             }
-            try fileManager.removeItem(atPath: path)
+            return
         }
 
-        // Create empty file at the same path
-        guard fileManager.createFile(atPath: path, contents: nil, attributes: nil) else {
-            throw BananaBlitzError.failedToCreateLockFile(path)
+        // An existing lock file carries the immutable flag; clear it so the
+        // path can be moved aside.
+        if isLocked(target) {
+            try setImmutableFlag(at: path, immutable: false)
         }
 
-        // Set user immutable flag
+        // Move the original to a unique sibling (same directory → same volume
+        // → atomic rename) so the path is free for the lock file.
+        let backupPath = path + ".bananablitz-bak-\(UUID().uuidString)"
+        try fileManager.moveItem(atPath: path, toPath: backupPath)
+
+        do {
+            try createLockFile(at: path)
+        } catch {
+            // Roll back: drop any half-created stub, then restore the original.
+            try? fileManager.removeItem(atPath: path)
+            guard restoreBackup(from: backupPath, to: path) else {
+                // Could not put the original back (e.g. the daemon recreated
+                // `path`). The user's data is NOT lost — it's at `backupPath` —
+                // but surface that explicitly instead of only logging.
+                throw BananaBlitzError.lockRollbackFailed(path: path, backupPath: backupPath, underlying: error.localizedDescription)
+            }
+            throw error
+        }
+
+        // Lock is in place — the replacement succeeded. A leftover backup is
+        // harmless clutter (never data loss), so cleanup failure does not fail
+        // the operation.
+        do {
+            try fileManager.removeItem(atPath: backupPath)
+        } catch {
+            log.error("Locked \(path, privacy: .public) but could not remove backup \(backupPath, privacy: .public): \(error.localizedDescription, privacy: .public)")
+        }
+    }
+
+    /// Create an empty file at `path` and set the user-immutable flag.
+    private func createLockFile(at path: String) throws {
+        if let lockFileCreator {
+            try lockFileCreator(path)
+        } else {
+            guard fileManager.createFile(atPath: path, contents: nil, attributes: nil) else {
+                throw BananaBlitzError.failedToCreateLockFile(path)
+            }
+        }
         try setImmutableFlag(at: path, immutable: true)
+    }
+
+    /// Restore the moved-aside original after a failed lock. Returns `false`
+    /// (and logs) if the move back fails — the original then remains at the
+    /// backup path.
+    @discardableResult
+    private func restoreBackup(from backupPath: String, to path: String) -> Bool {
+        do {
+            try fileManager.moveItem(atPath: backupPath, toPath: path)
+            return true
+        } catch {
+            log.error("CRITICAL: could not restore \(backupPath, privacy: .public) to \(path, privacy: .public): \(error.localizedDescription, privacy: .public). Original data remains at the backup path.")
+            return false
+        }
     }
 
     /// Remove the immutable flag, delete the lock file, and recreate the directory.
     func unlockTarget(_ target: PrivacyTarget) throws {
-        try assertInsideLibrary(target.resolvedPath)
         let path = target.resolvedPath
+        try PathSafety.validateTargetPath(path, libraryRoot: libraryRoot)
 
         if fileManager.fileExists(atPath: path) {
             try setImmutableFlag(at: path, immutable: false)
@@ -117,6 +190,10 @@ final class FileSystemGuard {
     /// Set or clear the user-immutable flag (`UF_IMMUTABLE`) without spawning
     /// a subprocess. Equivalent to `chflags uchg` / `chflags nouchg`.
     private func setImmutableFlag(at path: String, immutable: Bool) throws {
+        if let immutableFlagSetter {
+            try immutableFlagSetter(path, immutable)
+            return
+        }
         var url = URL(fileURLWithPath: path)
         var values = URLResourceValues()
         values.isUserImmutable = immutable
@@ -128,18 +205,6 @@ final class FileSystemGuard {
         }
     }
 
-    // MARK: - Path Safety
-
-    /// Refuse any operation whose resolved path would escape `~/Library`.
-    /// Cheap belt-and-braces guard against future code that lets a path leak through.
-    private func assertInsideLibrary(_ path: String) throws {
-        // Use standardised paths to collapse `..` segments.
-        let standardised = (path as NSString).standardizingPath
-        let standardisedLibrary = (libraryRoot as NSString).standardizingPath
-        if standardised == standardisedLibrary { return }
-        if standardised.hasPrefix(standardisedLibrary + "/") { return }
-        throw BananaBlitzError.refusedOutsideLibrary(path)
-    }
 }
 
 // MARK: - Errors
@@ -149,6 +214,7 @@ enum BananaBlitzError: LocalizedError {
     case immutableFlagFailed(String, String)
     case refusedOutsideLibrary(String)
     case refusedSymlink(String)
+    case lockRollbackFailed(path: String, backupPath: String, underlying: String)
 
     var errorDescription: String? {
         switch self {
@@ -160,6 +226,8 @@ enum BananaBlitzError: LocalizedError {
             return "Refusing to operate on path outside ~/Library: \(path)"
         case .refusedSymlink(let path):
             return "Refusing to operate on symlink at \(path)"
+        case .lockRollbackFailed(let path, let backupPath, let underlying):
+            return "Locking \(path) failed (\(underlying)) and the original could not be restored automatically. Your data is preserved at \(backupPath)."
         }
     }
 }
