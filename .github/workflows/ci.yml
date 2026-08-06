@@ -1,10 +1,7 @@
 name: CI
 
 # Thin caller for the shared push/PR pipeline (unsigned build + tests,
-# zero secrets). The reusable workflow was generalised from this repo's
-# previous ci.yml, so behaviour is unchanged apart from deliberately
-# dropped decoration (xcpretty, showdestinations-on-failure) — the
-# uploaded xcresult bundle carries everything those printed.
+# zero secrets). Test output ships as an uploaded xcresult bundle.
 # Release builds live in release.yml, triggered by `v*` tag pushes.
 
 on:

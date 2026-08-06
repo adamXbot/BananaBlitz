@@ -5,13 +5,11 @@ name: Release
 # bump) lives in privacykey/gh-workflows; this repo owns only its
 # build script (Scripts/release.sh) and the inputs below.
 #
-# Secrets are mapped EXPLICITLY (gen-3 names). This works because none
-# of them live in a deployment environment yet — explicit mappings
-# resolve in the caller's context, which has no environment. If
-# SPARKLE_PRIVATE_KEY is later moved into the `macos-signing`
-# environment (recommended), switch to `secrets: inherit` or the key
-# will resolve empty. See the PR that introduced this file for the
-# full secrets checklist.
+# Secrets are mapped EXPLICITLY. This works because none of them live
+# in a deployment environment — explicit mappings resolve in the
+# caller's context, which has no environment. If SPARKLE_PRIVATE_KEY
+# is later moved into the `macos-signing` environment (recommended),
+# switch to `secrets: inherit` or the key will resolve empty.
 
 on:
   push:
