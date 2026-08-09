@@ -1,115 +1,83 @@
-# BananaBlitz 🍌
+<div align="center">
 
-BananaBlitz is a lightweight, stealthy native macOS utility that helps you reclaim your privacy by periodically cleaning up deep system telemetry databases, Siri intelligence metrics, and tracking logs within your `~/Library` folder.
+<img src="BananaBlitz/Assets.xcassets/AppIcon.appiconset/AppIcon256x256.png" alt="BananaBlitz" width="128">
 
-Instead of disabling System Integrity Protection (SIP), BananaBlitz uses macOS native constructs (the user-immutable flag, equivalent to `chflags uchg`) to selectively neuter unwanted directories and stop Apple daemons from logging metrics, without risking breaking your OS.
+# BananaBlitz
+
+A menu-bar macOS utility that periodically clears telemetry, intelligence and tracking data out of your `~/Library`.
+
+[![Project status](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FadamXbot%2F.github%2Fmain%2Fbadges%2FBananaBlitz.json)](https://github.com/adamXbot/.github/blob/main/STATUS.md#bananablitz)
+[![Release](https://img.shields.io/github/v/release/adamXbot/BananaBlitz?label=release)](https://github.com/adamXbot/BananaBlitz/releases/latest)
+[![Licence](https://img.shields.io/github/license/adamXbot/BananaBlitz?label=licence)](LICENSE)
+[![CI](https://img.shields.io/github/actions/workflow/status/adamXbot/BananaBlitz/ci.yml?branch=main&label=ci)](https://github.com/adamXbot/BananaBlitz/actions/workflows/ci.yml)
+
+</div>
+
+<!-- disclosure:start -->
+> [!WARNING]
+> **Pre-1.0 — no stable release yet.** Anything can change in any release, including a patch: APIs, CLI flags, config keys, file formats, and data already on disk. Keep your own backups.
+> **Project status.** The badge above is generated from [the adamXbot status list](https://github.com/adamXbot/.github/blob/main/STATUS.md), which says what I promise for this project and every other one.
+<!-- disclosure:end -->
 
 > [!CAUTION]
-> **Use at your own risk.** BananaBlitz modifies system-generated files and directories within your `~/Library` folder. The "Lock with Immutable File" strategy *is* destructive — it deletes the original directory and replaces it with a locked empty file — but the operation is reversible via the in-app "Save Recovery Script…" button (Settings → Preferences → Data) or the bundled `unbrick.sh`. The developers are not responsible for any data loss, system instability, or unexpected behavior resulting from the use of this utility. Always ensure you have a recent backup of your data.
+> **Use at your own risk.** BananaBlitz modifies system-generated files and directories within your `~/Library` folder. The "Lock with Immutable File" strategy *is* destructive — it deletes the original directory and replaces it with a locked empty file — but the operation is reversible via the in-app "Save Recovery Script…" button (Settings → Preferences → Data) or the bundled [`Scripts/unbrick.sh`](Scripts/unbrick.sh). The developers are not responsible for any data loss, system instability, or unexpected behaviour resulting from the use of this utility. Always ensure you have a recent backup of your data.
 
-## Install
+---
 
-**Homebrew Cask** (preferred):
+macOS writes a great deal about you into `~/Library`: analytics payloads, Siri and Biome intelligence databases, screen-time records and daemon caches. Most of it is regenerated whether you want it or not.
+
+BananaBlitz sits in the menu bar and clears those paths on a schedule you choose. Rather than disabling System Integrity Protection, it uses a native macOS construct — the user-immutable flag, the same thing `chflags uchg` sets — to selectively neuter directories so the responsible daemon cannot recreate them.
+
+Some of these paths back real features, so cleaning them makes suggestions and predictions worse until they rebuild. Every target states its side effect before you enable it.
+
+## What it does
+
+- **Three cleaning levels.** Basic (8 targets — analytics and metrics only), Strong (adds 10 intelligence databases), and Paranoid (adds 8 more, including screen time and Siri profiling). 26 targets in total, each with a stated side effect.
+- **Three strategies per target.** *Wipe Contents* empties the directory and lets the daemon rebuild it; *Delete Databases Only* removes just `.db` / `.sqlite` / `.segb` files; *Lock with Immutable File* replaces the directory with a locked empty file the daemon cannot recreate.
+- **Dry run.** Reports every target, the action that would run, and the item count and byte size at risk, before anything is touched.
+- **Scheduled cleaning.** Every 1, 2, 4, 8, 12 or 24 hours, or manual only. The scheduler re-checks after the Mac wakes and runs a catch-up clean if a fire was missed while the app was closed. Unattended runs downgrade locking to a plain wipe unless you explicitly allow it.
+- **Menu bar only.** No dock icon. An optional global shortcut (⌘⌃B) opens it from anywhere — off by default, enabled in Settings → Preferences.
+- **Recovery built in.** [`Scripts/unbrick.sh`](Scripts/unbrick.sh) reverses every lock and is generated from the same target registry the app cleans from, so it cannot drift. The app can also take an APFS local snapshot before it cleans.
+- **Guardrails.** Filesystem operations are refused unless the path resolves inside `~/Library` with no symlinked ancestor. A self-test reports which targets are reachable, missing, locked, or blocked by missing permissions.
+
+## Get it
+
+**Homebrew cask:**
+
 ```sh
 brew install adamxbot/tap/bananablitz
 ```
 
-**Direct download:** signed + notarized DMG from the
-[latest release](https://github.com/adamxbot/BananaBlitz/releases/latest).
+The tap is currently serving 0.0.2 while the latest release is v0.0.3 — if you want the newest build today, take the DMG.
 
-## Features
-- **3 Privacy Levels:** Select from Basic (caches), Strong (Biome intelligence), and Paranoid (screentime, Siri profiling).
-- **Stealth Background Execution:** Set schedules to clean hourly, daily, or on-demand.
-- **Smart Directory Locking:** Replace directories with immutable empty files to block intrusive re-creations natively using `uchg`.
-- **Menu Bar Ready:** Fully built for your menu bar, cleanly getting out of the way.
+**Direct download:** the signed and notarised DMG attached to the [latest release](https://github.com/adamXbot/BananaBlitz/releases/latest).
 
-## Keyboard Shortcut
-You can quickly open BananaBlitz from anywhere by pressing `Command` + `Control` + `b`. This feature is disabled by default. To enable it, open the app, go to Settings -> Preferences, and toggle "Menu Bar Global Shortcut (⌘⌃B)".
+Requires macOS 14 or later. Because macOS protects `~/Library` from sandboxed apps, BananaBlitz ships without the App Sandbox and needs **Full Disk Access** — the onboarding wizard walks you through granting it.
 
-## Build Requirements
-- macOS 14.0+
-- Xcode 15+
+In-app updates use [Sparkle](https://github.com/sparkle-project/Sparkle) but are dormant: `SUFeedURL` and `SUPublicEDKey` are not yet in `Info.plist`, so "Check for Updates…" stays disabled. Everything else works. [`docs/RELEASES.md`](docs/RELEASES.md) covers what turning it on requires.
 
-## How to Compile
-BananaBlitz uses XcodeGen to manage its project generation to avoid messy git conflicts on `.pbxproj`.
+## Docs
 
-1. Ensure you have `xcodegen` installed (`brew install xcodegen`).
-2. Run `xcodegen generate` in the root folder.
-3. Open `BananaBlitz.xcodeproj` and build!
+There is no docs site. Everything lives in the repo:
 
-## Permissions
-Due to the system-level protections imposed by macOS over the `~/Library/` directory for apps, BananaBlitz requires **Full Disk Access** and is built without App Sandbox enabled. The onboarding wizard will guide you to enable this!
+- [`CONTRIBUTING.md`](CONTRIBUTING.md) — building, testing, and what each bundled script does.
+- [`docs/RELEASES.md`](docs/RELEASES.md) — signing, notarisation, the Sparkle appcast, and updating the Homebrew cask.
+- [`docs/RECOVERY.md`](docs/RECOVERY.md) — reverting the locks, snapshots, and the Full Disk Access requirement.
+- [`docs/MANUAL-LOCKING.md`](docs/MANUAL-LOCKING.md) — locking a single path by hand in Finder, without the app.
+- [`SECURITY.md`](SECURITY.md) — how to report a vulnerability.
 
-## Reverting
-If you need to revert the changes made by BananaBlitz, run the bundled recovery script:
+## Contributing
 
-```bash
-./Scripts/unbrick.sh
-```
-
-This will remove the immutable flag from the locked directories and files, and recreate them as normal directories and files.
-
-This may happen if you select the paranoid option.
-
-The script bundled in this repo is **auto-generated** from the canonical `PrivacyTarget.allTargets` registry. To regenerate it for your local target list, open the app and use **Settings → Preferences → Data → Save Recovery Script…**, or call `UnbrickScriptGenerator.write(to:)` directly.
-
-## Scripts
-All bundled scripts live in `Scripts/`:
-
-- `release.sh` — full release pipeline: archive → sign → notarize → DMG → notarize DMG → staple. Used by `.github/workflows/release.yml`; runs locally too with the right env vars.
-- `generate-appcast.sh` — wraps Sparkle's `generate_appcast` to produce a signed feed for the gh-pages branch.
-- `unbrick.sh` — recovery script that reverses every Lock-with-Immutable-File operation. Auto-generated from `PrivacyTarget.allTargets`.
-- `regenerate-app-icons.sh` — resizes a single source PNG into every slot in `AppIcon.appiconset` using the built-in `sips` tool.
-
-## Tests
-A unit-test target lives in `BananaBlitzTests/`. After `xcodegen generate`, run:
-
-```bash
-xcodebuild test -scheme BananaBlitz -destination 'platform=macOS'
-```
-
-Tests cover the `PrivacyCleaner` strategies, `FileSystemGuard` lock/unlock round-trips, `AppState` persistence, and `unbrick.sh` generation. CI runs the same command on every push (`.github/workflows/ci.yml`).
-
-## Cutting a release
-
-`MARKETING_VERSION` in `project.yml` is the canonical version. Bump
-both it and `CURRENT_PROJECT_VERSION`, commit, tag, push:
+The project file is generated by XcodeGen from [`project.yml`](project.yml), so `.pbxproj` conflicts do not happen. CI runs exactly two commands on every push and pull request to `main`:
 
 ```sh
-$EDITOR project.yml          # bump MARKETING_VERSION + CURRENT_PROJECT_VERSION
 xcodegen generate
-git commit -am "Release 1.1.0"
-git tag v1.1.0
-git push --follow-tags origin main
+xcodebuild test -scheme BananaBlitz -destination 'platform=macOS' -configuration Debug \
+  CODE_SIGN_IDENTITY="-" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO
 ```
 
-The tag push triggers `.github/workflows/release.yml`, which runs
-`Scripts/release.sh` (build → sign → notarize → DMG → notarize DMG →
-staple), runs `Scripts/generate-appcast.sh` (signs and indexes the DMG
-into the Sparkle feed), publishes the DMG to a GitHub Release, and
-pushes the new `appcast.xml` to the `gh-pages` branch.
+With [`just`](https://github.com/casey/just) installed those are `just setup` and `just test`. Full details, including the recipe list and the script inventory, are in [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
+## Licence
 
-## Auto-updates (Sparkle)
-
-The app integrates [Sparkle](https://github.com/sparkle-project/Sparkle)
-but is dormant until `SUFeedURL` and `SUPublicEDKey` are added to
-`BananaBlitz/Info.plist`. The full setup is in
-[`docs/RELEASES.md`](docs/RELEASES.md). Until those are populated, the
-"Check for Updates…" command is disabled — the rest of the app still
-works.
-
-
-## Manually locking a file (The visual way)
-![manual](https://github.com/user-attachments/assets/e4b5a561-a46c-47f2-ad6a-c9db3b4f789d)
-1. Open textedit and create a file
-2. Remove the extension and ensure it is spelt **exactly** the same as the folder
-3. Delete the folder in your ~/Library folder
-4. Quickly drag the file across e.g. `Trial`
-5. Right click on the file and 'lock' it
-
-That's it
-
-
-## License
-MIT
+MIT — see [LICENSE](LICENSE).
