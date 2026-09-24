@@ -6,10 +6,17 @@ struct TargetRowView: View {
     let size: Int64
     let isEnabled: Bool
     let isLocked: Bool
+    /// False when the path does not exist on this Mac at all (as opposed to
+    /// existing but being empty), so the row can say so instead of showing
+    /// nothing.
+    var isPresent: Bool = true
     let strategy: CleaningStrategy
     let onToggle: () -> Void
     let onStrategyChange: (CleaningStrategy) -> Void
     var onVerify: (() -> Void)? = nil
+    /// Explicit unlock action, offered only while `isLocked`. Cleaning never
+    /// removes a lock on its own.
+    var onUnlock: (() -> Void)? = nil
 
     @State private var isExpanded = false
     @State private var isHovered = false
@@ -50,8 +57,12 @@ struct TargetRowView: View {
 
                 Spacer()
 
-                // Size
-                if size > 0 {
+                // Size, or an honest "not here" when the path doesn't exist.
+                if !isPresent {
+                    Text("not present on this Mac")
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
+                } else if size > 0 {
                     SizeLabel(bytes: size, style: .compact)
                 }
 
@@ -133,18 +144,35 @@ struct TargetRowView: View {
                         }
                     }
 
-                    if let onVerify = onVerify {
-                        Button {
-                            onVerify()
-                        } label: {
-                            HStack(spacing: 4) {
-                                Image(systemName: "arrow.clockwise")
-                                Text("Verify state")
+                    HStack(spacing: 14) {
+                        if let onVerify = onVerify {
+                            Button {
+                                onVerify()
+                            } label: {
+                                HStack(spacing: 4) {
+                                    Image(systemName: "arrow.clockwise")
+                                    Text("Verify state")
+                                }
+                                .font(.system(size: 10))
                             }
-                            .font(.system(size: 10))
+                            .buttonStyle(.plain)
+                            .foregroundStyle(.secondary)
                         }
-                        .buttonStyle(.plain)
-                        .foregroundStyle(.secondary)
+
+                        if isLocked, let onUnlock = onUnlock {
+                            Button {
+                                onUnlock()
+                            } label: {
+                                HStack(spacing: 4) {
+                                    Image(systemName: "lock.open")
+                                    Text("Unlock")
+                                }
+                                .font(.system(size: 10))
+                            }
+                            .buttonStyle(.plain)
+                            .foregroundStyle(.orange)
+                            .help("Removes the lock file and recreates the empty directory so the system daemon can use it again. Cleaning never does this on its own.")
+                        }
                     }
                 }
                 .padding(.horizontal, 48)

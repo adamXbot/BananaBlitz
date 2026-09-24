@@ -38,10 +38,12 @@ Current coverage:
 
 | File | What it exercises |
 |---|---|
-| `PrivacyCleanerTests.swift` | the cleaning strategies |
+| `PrivacyCleanerTests.swift` | the cleaning strategies, locked targets being left alone, explicit unlock, measured bytes reclaimed |
+| `DryRunTests.swift` | dry-run copy, including locked and blocked targets |
 | `FileSystemGuardTests.swift` | lock/unlock round-trips |
-| `AppStateTests.swift` | persisted settings, history capping, unreadable-state handling |
-| `SchedulerServiceTests.swift` | unattended-run downgrading and the cleaning mutex |
+| `AppStateTests.swift` | persisted settings, history capping, unreadable-state handling, legacy state decoding |
+| `SchedulerServiceTests.swift` | unattended-run downgrading, the cleaning mutex, catch-up only after a missed fire |
+| `SnapshotServiceTests.swift` | parsing `tmutil` output |
 | `UnbrickScriptGeneratorTests.swift` | recovery-script generation |
 
 ## just recipes

@@ -1,7 +1,8 @@
 import Foundation
 
 /// Export `CleaningResult` history as JSON or CSV.
-/// All fields are stable — schema changes here are user-visible.
+/// All fields are stable — schema changes here are user-visible. `note` was
+/// appended as the last CSV column; older exports simply lack it.
 enum HistoryExporter {
 
     enum Format {
@@ -49,7 +50,7 @@ enum HistoryExporter {
     private static func csvData(for history: [CleaningResult]) throws -> Data {
         let formatter = ISO8601DateFormatter()
         var lines: [String] = []
-        lines.append("timestamp,target_id,target_name,strategy,success,bytes_reclaimed,error")
+        lines.append("timestamp,target_id,target_name,strategy,success,bytes_reclaimed,error,note")
         for result in history {
             lines.append([
                 formatter.string(from: result.timestamp),
@@ -58,7 +59,8 @@ enum HistoryExporter {
                 result.strategy.rawValue,
                 result.success ? "true" : "false",
                 String(result.bytesReclaimed),
-                csvQuote(result.error ?? "")
+                csvQuote(result.error ?? ""),
+                csvQuote(result.note ?? "")
             ].joined(separator: ","))
         }
         let body = lines.joined(separator: "\n") + "\n"

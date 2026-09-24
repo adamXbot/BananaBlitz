@@ -239,4 +239,24 @@ final class AppStateTests: XCTestCase {
         XCTAssertEqual(reader.totalBytesReclaimed, 4096)
         XCTAssertNotNil(reader.lastCleanDate)
     }
+
+    func test_load_toleratesHistoryWrittenBeforeNoteExisted() throws {
+        // A state file from a build that predates `CleaningResult.note`.
+        let legacy = """
+        {"enabledTargetIDs":["ad-privacy"],"targetStrategies":{},"cleaningHistory":[{"id":"6F9619FF-8B86-D011-B42D-00C04FC964FF","targetID":"ad-privacy","strategy":"wipeContents","timestamp":0,"bytesReclaimed":10,"success":true,"error":null}],"lastCleanDate":0,"totalBytesReclaimed":10}
+        """
+        try Data(legacy.utf8).write(to: tempURL)
+
+        let state = makeState()
+
+        XCTAssertEqual(state.cleaningHistory.count, 1)
+        XCTAssertNil(state.cleaningHistory[0].note)
+        XCTAssertEqual(state.totalBytesReclaimed, 10)
+    }
+
+    func test_applyScanSummary_recordsPresence() {
+        let state = makeState()
+        state.applyScanSummary(ScanSummary(sizes: ["a": 1], lockStates: ["a": false], presence: ["a": false]))
+        XCTAssertEqual(state.targetPresence["a"], false)
+    }
 }

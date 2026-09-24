@@ -6,8 +6,11 @@ import Foundation
 struct ScanSummary {
     var sizes: [String: Int64]
     var lockStates: [String: Bool]
+    /// `targetID → path exists on this Mac`. Lets the UI distinguish a target
+    /// that is genuinely absent from one that is merely empty.
+    var presence: [String: Bool]
 
-    static let empty = ScanSummary(sizes: [:], lockStates: [:])
+    static let empty = ScanSummary(sizes: [:], lockStates: [:], presence: [:])
 }
 
 /// Scans privacy targets on disk to determine their existence, size, and lock status.
@@ -31,11 +34,13 @@ final class TargetScanner {
     func summariseAll() -> ScanSummary {
         var sizes: [String: Int64] = [:]
         var locks: [String: Bool] = [:]
+        var presence: [String: Bool] = [:]
         for target in PrivacyTarget.allTargets {
             sizes[target.id] = targetSize(target)
             locks[target.id] = FileSystemGuard.shared.isLocked(target)
+            presence[target.id] = targetExists(target)
         }
-        return ScanSummary(sizes: sizes, lockStates: locks)
+        return ScanSummary(sizes: sizes, lockStates: locks, presence: presence)
     }
 
     /// Scan targets in a specific level.
@@ -89,6 +94,8 @@ final class TargetScanner {
 
     /// Recursively calculate the size of a directory.
     /// Skips symbolic links to avoid following them out of the target tree.
+    /// Hidden files and package contents are counted, because a wipe deletes
+    /// them too — the number shown must match the number reclaimed.
     private func directorySize(path: String) -> Int64 {
         var isDir: ObjCBool = false
         guard fileManager.fileExists(atPath: path, isDirectory: &isDir), isDir.boolValue else {
@@ -104,7 +111,7 @@ final class TargetScanner {
         guard let enumerator = fileManager.enumerator(
             at: url,
             includingPropertiesForKeys: keys,
-            options: [.skipsHiddenFiles, .skipsPackageDescendants]
+            options: []
         ) else { return 0 }
 
         var totalSize: Int64 = 0

@@ -4,6 +4,16 @@ The *Lock with Immutable File* strategy — the one the Paranoid level uses most
 deletes a directory and puts a locked empty file in its place. The lock is
 reversible; the contents that were deleted are not, so keep backups.
 
+Locks are only ever removed explicitly. The *Wipe Contents* and *Delete
+Databases Only* strategies leave a locked target alone (so a scheduled run that
+downgrades a lock to a wipe keeps the lock in place), and the dry run says so.
+
+## Unlock from the app
+
+Open **Settings → Targets**, expand a row that shows the lock icon, and click
+**Unlock**. That clears the immutable flag, deletes the lock file and recreates
+the empty directory so the system daemon can use the path again.
+
 ## Run the recovery script
 
 ```sh
@@ -11,10 +21,12 @@ reversible; the contents that were deleted are not, so keep backups.
 ```
 
 It removes the immutable flag from every locked path, deletes the lock file, and
-recreates the directory. A copy of the script also ships inside the app bundle at
-`BananaBlitz.app/Contents/Resources/unbrick.sh`. The canonical cask in this repo,
-[`Casks/bananablitz.rb`](../Casks/bananablitz.rb), runs that copy on uninstall so
-you are not left with locked directories after `brew uninstall`.
+recreates the directory. Builds from `main` also bundle a copy at
+`BananaBlitz.app/Contents/Resources/unbrick.sh`, and the canonical cask in this
+repo, [`Casks/bananablitz.rb`](../Casks/bananablitz.rb), runs that copy on
+uninstall so you are not left with locked directories after `brew uninstall`.
+Releases up to v0.0.3 do not include the bundled copy; on those builds use
+**Settings → Preferences → Data → Save Recovery Script…** or this repo's copy.
 
 ## Regenerating it for your own target list
 
@@ -26,10 +38,13 @@ produce one matching your current configuration, open the app and use
 
 ## Snapshots
 
-Before a clean, BananaBlitz can take an APFS local snapshot via
-`tmutil localsnapshot /`. That does not need administrator privileges on modern
-macOS. It is a Time Machine local snapshot — useful for restoring individual
-files, not a one-click bootable rollback.
+During setup, or later from **Settings → Preferences → Data → Create Local
+Snapshot Now**, BananaBlitz can take an APFS local snapshot via
+`tmutil localsnapshot`. That does not need administrator privileges or a
+configured Time Machine destination on modern macOS. The snapshot is taken when
+you ask for it, not automatically before every clean, and it is a Time Machine
+local snapshot — useful for restoring individual files, not a one-click bootable
+rollback.
 
 ## Permissions
 

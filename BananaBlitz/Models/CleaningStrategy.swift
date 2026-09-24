@@ -23,7 +23,7 @@ enum CleaningStrategy: String, CaseIterable, Codable, Identifiable {
         case .replaceWithFile:
             return "Deletes the directory, then replaces it with a locked empty file the daemon can't recreate. The lock is reversible with the recovery script; the deleted contents are not."
         case .deleteDatabases:
-            return "Delete only .db, .sqlite, and .segb files. Least disruptive option."
+            return "Delete only database files (.db, .sqlite, .sqlite3, .sqlite-shm, .sqlite-wal, .segb). Least disruptive option."
         }
     }
 
@@ -38,4 +38,10 @@ enum CleaningStrategy: String, CaseIterable, Codable, Identifiable {
     var isAggressive: Bool {
         self == .replaceWithFile
     }
+
+    /// File extensions the "Delete Databases Only" strategy removes. Single
+    /// source of truth for the cleaner, the dry run and the user-facing copy.
+    static let databaseExtensions: Set<String> = [
+        "db", "sqlite", "sqlite3", "sqlite-shm", "sqlite-wal", "segb"
+    ]
 }

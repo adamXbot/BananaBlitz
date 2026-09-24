@@ -1,5 +1,5 @@
 import SwiftUI
-import ServiceManagement
+import UserNotifications
 import AppKit
 
 /// Settings window with tabs for Schedule, Targets, and Preferences.
@@ -11,7 +11,10 @@ struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
 
     @State private var selectedTab = 0
-    @State private var unbrickStatusMessage: String?
+    @State private var dataStatusMessage: String?
+    @State private var notificationAuthorization: UNAuthorizationStatus?
+    @State private var loginItemState: LoginItemService.State = .disabled
+    @State private var loginItemError: String?
     @State private var dryRunReports: [DryRunReport] = []
     @State private var dryRunSheetPresented = false
     @State private var selfTestReports: [SelfTest.Report] = []
@@ -211,7 +214,7 @@ struct SettingsView: View {
 
     private var preferencesTab: some View {
         Form {
-            Section("Notifications") {
+            Section(header: Text("Notifications"), footer: notificationsFooter) {
                 Picker("After Auto-Clean", selection: Binding(
                     get: { appState.notificationStyle },
                     set: { appState.notificationStyle = $0 }
@@ -257,13 +260,26 @@ struct SettingsView: View {
             }
 
             Section("Preferences") {
-                Toggle("Launch at Login", isOn: Binding(
-                    get: { appState.launchAtLogin },
-                    set: { newValue in
-                        appState.launchAtLogin = newValue
-                        updateLoginItem(enabled: newValue)
+                VStack(alignment: .leading, spacing: 4) {
+                    Toggle("Launch at Login", isOn: Binding(
+                        get: { appState.launchAtLogin },
+                        set: { newValue in setLaunchAtLogin(newValue) }
+                    ))
+
+                    if let loginItemError {
+                        Text(loginItemError)
+                            .font(.caption)
+                            .foregroundStyle(.red)
+                    } else if loginItemState == .requiresApproval {
+                        HStack(spacing: 6) {
+                            Text("Waiting for your approval in System Settings → General → Login Items.")
+                                .font(.caption)
+                                .foregroundStyle(.orange)
+                            Button("Open Login Items") { LoginItemService.openSystemSettings() }
+                                .controlSize(.small)
+                        }
                     }
-                ))
+                }
 
                 Toggle("Show Menu Bar Status Icons", isOn: Binding(
                     get: { appState.showMenuBarStatus },
@@ -355,7 +371,11 @@ struct SettingsView: View {
                     exportHistory()
                 }
 
-                if let message = unbrickStatusMessage {
+                Button("Create Local Snapshot Now") {
+                    createSnapshot()
+                }
+
+                if let message = dataStatusMessage {
                     Text(message)
                         .font(.caption)
                         .foregroundStyle(.secondary)
@@ -379,7 +399,7 @@ struct SettingsView: View {
                     }
                     Button("Cancel", role: .cancel) {}
                 } message: {
-                    Text("This clears your cleaning history, target selection, strategies, and schedule, then restarts onboarding. It can't be undone. Directories you've locked are not unlocked — use the recovery script for those.")
+                    Text("This clears your cleaning history, target selection, strategies, and schedule, then restarts onboarding. It can't be undone. Directories you've locked stay locked — use Unlock in the Targets tab or the recovery script for those.")
                 }
             }
 
@@ -392,6 +412,8 @@ struct SettingsView: View {
         }
         .formStyle(.grouped)
         .scrollContentBackground(.hidden)
+        .onAppear { refreshLoginItemState(reconcile: true) }
+        .task { await refreshNotificationStatus() }
         .sheet(isPresented: $dryRunSheetPresented) {
             DryRunSheet(reports: dryRunReports) { dryRunSheetPresented = false }
         }
@@ -411,17 +433,85 @@ struct SettingsView: View {
         }
     }
 
+    // MARK: - Notifications
+
+    /// Footer under the notification picker: says when the chosen style can't
+    /// take effect because macOS has notifications off, or has never been
+    /// asked, instead of silently dropping every alert.
+    @ViewBuilder
+    private var notificationsFooter: some View {
+        switch notificationAuthorization {
+        case .denied?:
+            HStack(alignment: .top, spacing: 8) {
+                Text("Notifications are turned off for BananaBlitz in System Settings, so clean summaries and failure alerts will not be shown.")
+                Button("Open Settings") { PermissionChecker.shared.openNotificationSettings() }
+            }
+        case .notDetermined?:
+            HStack(alignment: .top, spacing: 8) {
+                Text("macOS has not been asked to allow BananaBlitz notifications yet.")
+                Button("Enable Notifications") { requestNotificationPermission() }
+            }
+        default:
+            Text("Failure alerts are always sent, even in Silent mode.")
+        }
+    }
+
+    private func refreshNotificationStatus() async {
+        let settings = await UNUserNotificationCenter.current().notificationSettings()
+        await MainActor.run {
+            notificationAuthorization = settings.authorizationStatus
+        }
+    }
+
+    private func requestNotificationPermission() {
+        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { _, error in
+            if let error {
+                AppLog.app.error("Notification authorisation failed: \(error.localizedDescription, privacy: .public)")
+            }
+            Task { await refreshNotificationStatus() }
+        }
+    }
+
     // MARK: - Login Item
 
-    private func updateLoginItem(enabled: Bool) {
+    /// Only flips the stored preference once macOS has accepted the change;
+    /// on failure the toggle stays where it was and the reason is shown.
+    private func setLaunchAtLogin(_ enabled: Bool) {
         do {
-            if enabled {
-                try SMAppService.mainApp.register()
-            } else {
-                try SMAppService.mainApp.unregister()
-            }
+            try LoginItemService.setEnabled(enabled)
+            appState.launchAtLogin = enabled
+            loginItemError = nil
         } catch {
+            loginItemError = "Could not \(enabled ? "enable" : "disable") Launch at Login: \(error.localizedDescription)"
             AppLog.loginItem.error("Failed to update login item: \(error.localizedDescription, privacy: .public)")
+        }
+        refreshLoginItemState(reconcile: false)
+    }
+
+    /// Read back what macOS actually has. With `reconcile`, a login item the
+    /// user removed in System Settings also turns the toggle off, so the
+    /// preference never claims something the system disagrees with.
+    private func refreshLoginItemState(reconcile: Bool) {
+        loginItemState = LoginItemService.state
+        guard reconcile else { return }
+        let actuallyOn = loginItemState != .disabled
+        if appState.launchAtLogin != actuallyOn {
+            appState.launchAtLogin = actuallyOn
+        }
+    }
+
+    // MARK: - Snapshot
+
+    private func createSnapshot() {
+        dataStatusMessage = "Creating local snapshot…"
+        SnapshotService.shared.createSnapshot { result in
+            switch result {
+            case .success(let name):
+                let label = name.map { " \($0)" } ?? ""
+                dataStatusMessage = "Local snapshot\(label) created. Restore individual files by entering Time Machine."
+            case .failure(let message):
+                dataStatusMessage = "Snapshot failed: \(message)"
+            }
         }
     }
 
@@ -456,9 +546,9 @@ struct SettingsView: View {
 
         do {
             try HistoryExporter.export(appState.cleaningHistory, format: format, to: url)
-            unbrickStatusMessage = "History saved to \(url.path)"
+            dataStatusMessage = "History saved to \(url.path)"
         } catch {
-            unbrickStatusMessage = "Export failed: \(error.localizedDescription)"
+            dataStatusMessage = "Export failed: \(error.localizedDescription)"
             AppLog.app.error("History export failed: \(error.localizedDescription, privacy: .public)")
         }
     }
@@ -473,9 +563,9 @@ struct SettingsView: View {
 
         do {
             try UnbrickScriptGenerator.write(to: url, targets: PrivacyTarget.allTargets)
-            unbrickStatusMessage = "Saved to \(url.path)"
+            dataStatusMessage = "Saved to \(url.path)"
         } catch {
-            unbrickStatusMessage = "Save failed: \(error.localizedDescription)"
+            dataStatusMessage = "Save failed: \(error.localizedDescription)"
             AppLog.app.error("Unbrick script export failed: \(error.localizedDescription, privacy: .public)")
         }
     }

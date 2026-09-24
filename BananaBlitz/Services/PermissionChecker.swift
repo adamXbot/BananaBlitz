@@ -52,6 +52,20 @@ class PermissionChecker {
         }
     }
 
+    /// Open System Settings → Notifications. The extension URL is the
+    /// macOS 13+ form; the legacy pane URL is tried if it is refused.
+    func openNotificationSettings() {
+        let candidates = [
+            "x-apple.systempreferences:com.apple.Notifications-Settings.extension",
+            "x-apple.systempreferences:com.apple.preference.notifications"
+        ]
+        for candidate in candidates {
+            if let url = URL(string: candidate), NSWorkspace.shared.open(url) {
+                return
+            }
+        }
+    }
+
     private enum Probe {
         case file(String)
         case directory(String)

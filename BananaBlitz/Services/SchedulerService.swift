@@ -10,7 +10,9 @@ import SwiftUI
 ///      We re-check on `NSWorkspace.didWakeNotification`.
 ///   2. Relaunch — if the app quits or restarts after the scheduled fire,
 ///      `lastCleanDate` is compared against `Date()` on `configure(with:)`
-///      and an immediate catch-up clean runs if overdue.
+///      and an immediate catch-up clean runs if a fire was missed. An install
+///      that has never cleaned is not "overdue"; it waits for its first
+///      scheduled fire.
 ///   3. Paused-mid-fire — `performScheduledClean` re-checks `isPaused` at
 ///      fire time, in case the user paused between schedule and timer fire.
 final class SchedulerService: ObservableObject {
@@ -94,12 +96,21 @@ final class SchedulerService: ObservableObject {
     // MARK: - Catch-up
 
     /// If a scheduled fire was missed (sleep, relaunch, etc.), run immediately.
-    private func catchUpIfOverdue() {
+    ///
+    /// Only a *missed* fire counts. With no `lastCleanDate` there is nothing to
+    /// be overdue from — running here would start an unattended clean the
+    /// moment onboarding finishes (and on every launch until one succeeds),
+    /// which the user may have deliberately skipped. Internal rather than
+    /// private so the rule is unit-testable.
+    func catchUpIfOverdue() {
         guard let state = appState, !state.isPaused else { return }
         let interval = state.scheduleInterval.rawValue
         guard interval > 0 else { return }
 
-        let last = state.lastCleanDate ?? .distantPast
+        guard let last = state.lastCleanDate else {
+            log.debug("Catch-up skipped: no previous clean to be overdue from")
+            return
+        }
         let elapsed = Date().timeIntervalSince(last)
         guard elapsed >= interval else { return }
 
@@ -280,8 +291,13 @@ final class SchedulerService: ObservableObject {
         case .silent:
             return
         case .summary:
-            var body = "Cleaned \(successCount) target\(successCount == 1 ? "" : "s")"
+            let skippedCount = results.filter { $0.note != nil }.count
+            let cleanedCount = successCount - skippedCount
+            var body = "Cleaned \(cleanedCount) target\(cleanedCount == 1 ? "" : "s")"
             body += " · \(totalBytes.formattedBytes) reclaimed"
+            if skippedCount > 0 {
+                body += " · \(skippedCount) locked, skipped"
+            }
             if failCount > 0 {
                 body += " · \(failCount) failed"
             }
@@ -289,7 +305,8 @@ final class SchedulerService: ObservableObject {
         case .detailed:
             let lines = results.prefix(10).map { result in
                 let name = result.targetName
-                return "\(result.success ? "✓" : "✗") \(name) (\(result.bytesReclaimed.formattedBytes))"
+                let mark = result.note != nil ? "🔒" : (result.success ? "✓" : "✗")
+                return "\(mark) \(name) (\(result.bytesReclaimed.formattedBytes))"
             }
             content.body = lines.joined(separator: "\n")
         }
@@ -315,7 +332,12 @@ final class SchedulerService: ObservableObject {
         content.sound = .default
         let names = failures.prefix(3).map { $0.targetName }.joined(separator: ", ")
         let suffix = failures.count > 3 ? " and \(failures.count - 3) more" : ""
-        content.body = "Could not clean: \(names)\(suffix). Open BananaBlitz to investigate."
+        var body = "Could not clean: \(names)\(suffix)."
+        if let reason = failures.first?.error, !reason.isEmpty {
+            body += " \(reason)"
+        }
+        body += " Open BananaBlitz to investigate."
+        content.body = body
 
         let request = UNNotificationRequest(
             identifier: "bananablitz.failure.\(UUID().uuidString)",
