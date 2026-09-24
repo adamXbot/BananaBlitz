@@ -1,10 +1,12 @@
 import SwiftUI
-import ServiceManagement
 
-/// Step 5: Configure scheduling and background launch behaviour.
+/// Step 6: Configure scheduling and background launch behaviour.
 struct ScheduleStepView: View {
     @EnvironmentObject var appState: AppState
     @EnvironmentObject var scheduler: SchedulerService
+
+    @State private var loginItemState: LoginItemService.State = .disabled
+    @State private var loginItemError: String?
 
     var body: some View {
         VStack(spacing: 24) {
@@ -37,10 +39,10 @@ struct ScheduleStepView: View {
                 VStack(alignment: .leading, spacing: 6) {
                     Text("How often should we clean?")
                         .font(.system(size: 12, weight: .semibold))
-                    
+
                     Picker("", selection: Binding(
                         get: { appState.scheduleInterval },
-                        set: { 
+                        set: {
                             appState.scheduleInterval = $0
                             scheduler.updateSchedule()
                         }
@@ -61,22 +63,12 @@ struct ScheduleStepView: View {
                 )
 
                 // Launch at Login. The toggle reflects whatever the user
-                // chooses — we never silently flip it on for them.
+                // chooses — we never silently flip it on for them — and it
+                // only moves once macOS has actually accepted the change.
                 VStack(alignment: .leading, spacing: 6) {
                     Toggle(isOn: Binding(
                         get: { appState.launchAtLogin },
-                        set: { newValue in
-                            appState.launchAtLogin = newValue
-                            do {
-                                if newValue {
-                                    try SMAppService.mainApp.register()
-                                } else {
-                                    try SMAppService.mainApp.unregister()
-                                }
-                            } catch {
-                                AppLog.loginItem.error("Failed to update login item: \(error.localizedDescription, privacy: .public)")
-                            }
-                        }
+                        set: { newValue in setLaunchAtLogin(newValue) }
                     )) {
                         VStack(alignment: .leading, spacing: 2) {
                             Text("Launch at Login")
@@ -87,6 +79,20 @@ struct ScheduleStepView: View {
                         }
                     }
                     .toggleStyle(.switch)
+
+                    if let loginItemError {
+                        Text(loginItemError)
+                            .font(.system(size: 10))
+                            .foregroundStyle(.red)
+                    } else if loginItemState == .requiresApproval {
+                        HStack(spacing: 6) {
+                            Text("Needs your approval in System Settings → General → Login Items.")
+                                .font(.system(size: 10))
+                                .foregroundStyle(.orange)
+                            Button("Open") { LoginItemService.openSystemSettings() }
+                                .controlSize(.small)
+                        }
+                    }
                 }
                 .padding(16)
                 .frame(maxWidth: 320)
@@ -99,5 +105,20 @@ struct ScheduleStepView: View {
             Spacer()
         }
         .padding(24)
+        .onAppear { loginItemState = LoginItemService.state }
+    }
+
+    /// Only flips the stored preference once macOS has accepted the change;
+    /// on failure the toggle stays where it was and the reason is shown.
+    private func setLaunchAtLogin(_ enabled: Bool) {
+        do {
+            try LoginItemService.setEnabled(enabled)
+            appState.launchAtLogin = enabled
+            loginItemError = nil
+        } catch {
+            loginItemError = "Could not \(enabled ? "enable" : "disable") Launch at Login: \(error.localizedDescription)"
+            AppLog.loginItem.error("Failed to update login item: \(error.localizedDescription, privacy: .public)")
+        }
+        loginItemState = LoginItemService.state
     }
 }

@@ -135,6 +135,11 @@ class AppState: ObservableObject {
     /// `scanResults` so view bodies don't have to hit the filesystem.
     @Published var lockStates: [String: Bool] = [:]
 
+    /// Cached presence — `targetID → path exists on this Mac`. Refreshed with
+    /// `scanResults` so the Targets tab can say "not present" instead of
+    /// showing an empty row.
+    @Published var targetPresence: [String: Bool] = [:]
+
     /// Cached Full Disk Access status. Refreshed via a `.task` poller in views
     /// that need it; never call `PermissionChecker.hasFullDiskAccess()` from
     /// inside a view body.
@@ -281,6 +286,7 @@ class AppState: ObservableObject {
     func applyScanSummary(_ summary: ScanSummary) {
         scanResults = summary.sizes
         lockStates = summary.lockStates
+        targetPresence = summary.presence
     }
 
     /// Refresh the cached size + lock state for one target (invoked by the
@@ -288,8 +294,10 @@ class AppState: ObservableObject {
     func refreshTarget(_ target: PrivacyTarget) {
         let size = TargetScanner.shared.targetSize(target)
         let locked = TargetScanner.shared.isLocked(target)
+        let present = TargetScanner.shared.targetExists(target)
         scanResults[target.id] = size
         lockStates[target.id] = locked
+        targetPresence[target.id] = present
     }
 
     // MARK: - Persistence (JSON file for complex data)
@@ -426,6 +434,7 @@ class AppState: ObservableObject {
         lastCleanDate = nil
         scanResults.removeAll()
         lockStates.removeAll()
+        targetPresence.removeAll()
         // Restart the onboarding wizard from step 0.
         UserDefaults.standard.removeObject(forKey: StorageKey.onboardingStep)
         savePersistedData()

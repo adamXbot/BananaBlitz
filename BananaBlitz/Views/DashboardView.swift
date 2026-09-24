@@ -103,9 +103,22 @@ struct DashboardView: View {
                 .font(.system(size: 12))
                 .foregroundStyle(result.success ? .green : .red)
 
-            Text(result.targetName)
-                .font(.system(size: 11, weight: .medium))
-                .lineLimit(1)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(result.targetName)
+                    .font(.system(size: 11, weight: .medium))
+                    .lineLimit(1)
+
+                // Why a target failed, or why a success touched nothing. Both
+                // are recorded on every result, so show them.
+                if let detail = result.error ?? result.note, !detail.isEmpty {
+                    Text(detail)
+                        .font(.system(size: 9))
+                        .foregroundStyle(result.success ? Color.secondary : Color.red)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                        .help(detail)
+                }
+            }
 
             Spacer()
 
@@ -145,11 +158,10 @@ struct DashboardView: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Last clean had \(recent.count) failure\(recent.count == 1 ? "" : "s")")
                         .font(.system(size: 12, weight: .semibold))
-                    Text(recent.prefix(3).map { $0.targetName }.joined(separator: ", ") +
-                         (recent.count > 3 ? ", and \(recent.count - 3) more" : ""))
+                    Text(failureLines(recent))
                         .font(.system(size: 11))
                         .foregroundStyle(.secondary)
-                        .lineLimit(2)
+                        .lineLimit(4)
                 }
                 Spacer()
             }
@@ -175,5 +187,20 @@ struct DashboardView: View {
             mostRecent.timestamp.timeIntervalSince(result.timestamp) <= window
         }
         return prefix.filter { !$0.success }
+    }
+
+    /// One line per failure with its reason, capped at three, so the banner
+    /// says *why* and not just *what*.
+    private func failureLines(_ failures: [CleaningResult]) -> String {
+        var lines = failures.prefix(3).map { failure -> String in
+            if let reason = failure.error, !reason.isEmpty {
+                return "\(failure.targetName): \(reason)"
+            }
+            return failure.targetName
+        }
+        if failures.count > 3 {
+            lines.append("…and \(failures.count - 3) more")
+        }
+        return lines.joined(separator: "\n")
     }
 }

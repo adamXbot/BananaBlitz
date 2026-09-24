@@ -56,6 +56,7 @@ struct MenuBarView: View {
                         cleanOutcome = CleanOutcome(
                             succeeded: succeeded,
                             failed: results.count - succeeded,
+                            skipped: results.filter { $0.note != nil }.count,
                             bytes: results.reduce(Int64(0)) { $0 + $1.bytesReclaimed }
                         )
                     }
@@ -288,7 +289,8 @@ struct MenuBarView: View {
                 .foregroundStyle(outcome.failed == 0 ? .green : .orange)
 
             if outcome.failed == 0 {
-                Text("Cleaned \(outcome.succeeded) · \(outcome.bytes.formattedBytes) reclaimed")
+                Text("Cleaned \(outcome.succeeded - outcome.skipped) · \(outcome.bytes.formattedBytes) reclaimed"
+                     + (outcome.skipped > 0 ? " · \(outcome.skipped) locked, skipped" : ""))
                     .font(.system(size: 10))
                     .foregroundStyle(.secondary)
                 Spacer()
@@ -313,6 +315,8 @@ struct MenuBarView: View {
     private struct CleanOutcome {
         let succeeded: Int
         let failed: Int
+        /// Successful results that touched nothing because the target is locked.
+        let skipped: Int
         let bytes: Int64
     }
 

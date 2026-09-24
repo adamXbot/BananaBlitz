@@ -150,4 +150,103 @@ final class PrivacyCleanerTests: XCTestCase {
         XCTAssertTrue(fm.fileExists(atPath: outside.path))
         XCTAssertTrue(PathSafety.isSymbolicLink(at: link.path))
     }
+
+    // MARK: - Locked targets are left alone
+
+    /// Locks `dir` the way a manual Blitz does and returns the target plus a
+    /// guard/cleaner pair bound to the sandbox. Callers unlock in `defer` so
+    /// tearDown can delete the sandbox.
+    private func lockedFixture(_ dir: URL) throws -> (PrivacyTarget, FileSystemGuard, PrivacyCleaner) {
+        try fm.createDirectory(at: dir, withIntermediateDirectories: true)
+        _ = try writeFile("a.bin", in: dir)
+        let target = makeTarget(path: dir.path)
+        let guardService = FileSystemGuard(libraryRoot: sandbox.path)
+        let lockingCleaner = PrivacyCleaner(libraryRoot: sandbox.path, guardService: guardService)
+        let locked = lockingCleaner.clean(target: target, strategy: .replaceWithFile)
+        XCTAssertTrue(locked.success, locked.error ?? "")
+        XCTAssertTrue(guardService.isLocked(target), "precondition: target is locked")
+        return (target, guardService, lockingCleaner)
+    }
+
+    private func assertStillLocked(
+        _ target: PrivacyTarget,
+        _ guardService: FileSystemGuard,
+        file: StaticString = #filePath,
+        line: UInt = #line
+    ) {
+        XCTAssertTrue(guardService.isLocked(target), "lock must survive", file: file, line: line)
+        var isDir: ObjCBool = false
+        _ = fm.fileExists(atPath: target.resolvedPath, isDirectory: &isDir)
+        XCTAssertFalse(isDir.boolValue, "the lock file must still be in place, not a recreated directory",
+                       file: file, line: line)
+    }
+
+    func test_wipeContents_leavesLockedTargetLocked() throws {
+        let (target, guardService, lockingCleaner) = try lockedFixture(sandbox.appendingPathComponent("Biome"))
+        defer { try? guardService.unlockTarget(target) }
+
+        // The default scheduled run downgrades a lock to a wipe; that wipe
+        // must be a no-op, not an unlock.
+        let jobs = SchedulerService.sanitiseForUnattendedRun(
+            [CleaningJob(target: target, strategy: .replaceWithFile)], allowAggressive: false)
+        XCTAssertEqual(jobs[0].strategy, .wipeContents)
+        let result = lockingCleaner.cleanAll(jobs: jobs)[0]
+
+        XCTAssertTrue(result.success)
+        XCTAssertEqual(result.bytesReclaimed, 0)
+        XCTAssertEqual(result.note, PrivacyCleaner.lockedSkipNote)
+        assertStillLocked(target, guardService)
+    }
+
+    func test_deleteDatabases_leavesLockedTargetLocked() throws {
+        let (target, guardService, lockingCleaner) = try lockedFixture(sandbox.appendingPathComponent("Knowledge"))
+        defer { try? guardService.unlockTarget(target) }
+
+        let result = lockingCleaner.clean(target: target, strategy: .deleteDatabases)
+
+        XCTAssertTrue(result.success)
+        XCTAssertEqual(result.note, PrivacyCleaner.lockedSkipNote)
+        assertStillLocked(target, guardService)
+    }
+
+    func test_unlock_removesLockAndRecreatesEmptyDirectory() throws {
+        let dir = sandbox.appendingPathComponent("Trial")
+        let (target, guardService, lockingCleaner) = try lockedFixture(dir)
+        defer { try? guardService.unlockTarget(target) }
+
+        try lockingCleaner.unlock(target: target)
+
+        XCTAssertFalse(guardService.isLocked(target))
+        var isDir: ObjCBool = false
+        XCTAssertTrue(fm.fileExists(atPath: dir.path, isDirectory: &isDir))
+        XCTAssertTrue(isDir.boolValue, "unlock recreates the directory")
+        XCTAssertEqual(try fm.contentsOfDirectory(atPath: dir.path), [])
+    }
+
+    // MARK: - bytesReclaimed is measured, not assumed
+
+    func test_deleteDatabases_reportsOnlyBytesActuallyRemoved() throws {
+        let dir = sandbox.appendingPathComponent("measured")
+        try fm.createDirectory(at: dir, withIntermediateDirectories: true)
+        _ = try writeFile("keep.txt", in: dir, contents: String(repeating: "k", count: 1000))
+        _ = try writeFile("foo.db", in: dir, contents: String(repeating: "d", count: 300))
+
+        let result = cleaner.clean(target: makeTarget(path: dir.path), strategy: .deleteDatabases)
+
+        XCTAssertTrue(result.success)
+        XCTAssertEqual(result.bytesReclaimed, 300, "must not claim the whole directory")
+    }
+
+    func test_wipeContents_countsHiddenFilesInBytesReclaimed() throws {
+        let dir = sandbox.appendingPathComponent("hidden")
+        try fm.createDirectory(at: dir, withIntermediateDirectories: true)
+        _ = try writeFile(".hidden", in: dir, contents: String(repeating: "h", count: 50))
+        _ = try writeFile("a.bin", in: dir, contents: String(repeating: "a", count: 100))
+
+        let result = cleaner.clean(target: makeTarget(path: dir.path), strategy: .wipeContents)
+
+        XCTAssertTrue(result.success)
+        XCTAssertEqual(result.bytesReclaimed, 150)
+        XCTAssertEqual(try fm.contentsOfDirectory(atPath: dir.path), [])
+    }
 }

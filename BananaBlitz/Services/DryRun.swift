@@ -17,16 +17,28 @@ struct DryRunReport: Identifiable {
 
 enum DryRun {
 
-    static func plan(jobs: [CleaningJob]) -> [DryRunReport] {
+    /// Action text for a locked target under a non-locking strategy.
+    static let lockedSkipAction = "Locked by BananaBlitz — skipped. Use Unlock in Settings → Targets to remove the lock."
+    /// Action text for re-applying a lock that is already in place.
+    static let alreadyLockedAction = "Already locked — the lock is re-applied, nothing is deleted"
+
+    /// `libraryRoot`, `guardService` and `scanner` are injectable so the plan
+    /// can be exercised against a temporary directory in tests.
+    static func plan(
+        jobs: [CleaningJob],
+        libraryRoot: String = PathSafety.defaultLibraryRoot,
+        guardService: FileSystemGuard = .shared,
+        scanner: TargetScanner = .shared
+    ) -> [DryRunReport] {
         let fm = FileManager.default
-        let dbExtensions: Set<String> = ["db", "sqlite", "sqlite3", "sqlite-shm", "sqlite-wal", "segb"]
+        let dbExtensions = CleaningStrategy.databaseExtensions
 
         return jobs.map { job in
             let target = job.target
             let path = target.resolvedPath
 
             do {
-                try PathSafety.validateTargetPath(path)
+                try PathSafety.validateTargetPath(path, libraryRoot: libraryRoot)
             } catch {
                 return DryRunReport(
                     target: target,
@@ -37,22 +49,35 @@ enum DryRun {
                 )
             }
 
+            // Mirror the cleaner: a locked target is left alone by every
+            // non-locking strategy, and re-locking deletes nothing. Say so,
+            // instead of describing a directory that no longer exists.
+            if guardService.isLocked(target) {
+                return DryRunReport(
+                    target: target,
+                    strategy: job.strategy,
+                    bytesAtRisk: 0,
+                    itemsAtRisk: 0,
+                    action: job.strategy == .replaceWithFile ? alreadyLockedAction : lockedSkipAction
+                )
+            }
+
             switch job.strategy {
             case .replaceWithFile:
-                let size = TargetScanner.shared.targetSize(target)
+                let size = scanner.targetSize(target)
                 return DryRunReport(
                     target: target,
                     strategy: job.strategy,
                     bytesAtRisk: size,
-                    itemsAtRisk: TargetScanner.shared.fileCount(target),
+                    itemsAtRisk: scanner.fileCount(target),
                     action: "Replace with locked empty file"
                 )
 
             case .wipeContents:
-                let size = TargetScanner.shared.targetSize(target)
+                let size = scanner.targetSize(target)
                 let count = target.isSpecificFile
                     ? (fm.fileExists(atPath: path) ? 1 : 0)
-                    : TargetScanner.shared.fileCount(target)
+                    : scanner.fileCount(target)
                 return DryRunReport(
                     target: target,
                     strategy: job.strategy,

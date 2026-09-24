@@ -5,7 +5,8 @@ struct SnapshotStepView: View {
     @State private var isCreatingInfo = false
     @State private var snapshotStatus: Status = .idle
     @State private var errorMessage: String? = nil
-    
+    @State private var snapshotName: String?
+
     enum Status {
         case idle
         case creating
@@ -38,7 +39,7 @@ struct SnapshotStepView: View {
                         .font(.system(size: 20, weight: .bold, design: .rounded))
                 }
                 
-                Text("Creating a Time Machine local snapshot lets you restore individual files via Time Machine if cleaning has unexpected effects. It is not a one-click bootable rollback.")
+                Text("Creating a Time Machine local snapshot lets you restore individual files via Time Machine if cleaning has unexpected effects. It is not a one-click bootable rollback, and it is taken now rather than before every clean — you can take another later from Settings → Preferences → Data.")
                     .font(.system(size: 13))
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
@@ -47,11 +48,18 @@ struct SnapshotStepView: View {
             
             VStack(spacing: 12) {
                 if snapshotStatus == .completed {
-                    HStack(spacing: 8) {
-                        Image(systemName: "checkmark.circle.fill")
-                            .foregroundStyle(.green)
-                        Text("Snapshot Created Successfully")
-                            .font(.system(size: 13, weight: .medium))
+                    VStack(spacing: 4) {
+                        HStack(spacing: 8) {
+                            Image(systemName: "checkmark.circle.fill")
+                                .foregroundStyle(.green)
+                            Text("Snapshot Created Successfully")
+                                .font(.system(size: 13, weight: .medium))
+                        }
+                        if let snapshotName {
+                            Text("Snapshot \(snapshotName). Restore individual files by entering Time Machine.")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
                     }
                     .transition(.opacity.combined(with: .move(edge: .bottom)))
                 } else {
@@ -134,15 +142,14 @@ struct SnapshotStepView: View {
         
         SnapshotService.shared.createSnapshot { result in
             switch result {
-            case .success:
+            case .success(let name):
                 withAnimation {
                     snapshotStatus = .completed
+                    snapshotName = name
                 }
             case .failure(let error):
                 snapshotStatus = .failed
                 errorMessage = error
-            case .cancelled:
-                snapshotStatus = .idle
             }
         }
     }

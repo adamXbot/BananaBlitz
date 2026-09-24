@@ -33,11 +33,11 @@ Some of these paths back real features, so cleaning them makes suggestions and p
 ## What it does
 
 - **Three cleaning levels.** Basic (8 targets — analytics and metrics only), Strong (adds 10 intelligence databases), and Paranoid (adds 8 more, including screen time and Siri profiling). 26 targets in total, each with a stated side effect.
-- **Three strategies per target.** *Wipe Contents* empties the directory and lets the daemon rebuild it; *Delete Databases Only* removes just `.db` / `.sqlite` / `.segb` files; *Lock with Immutable File* replaces the directory with a locked empty file the daemon cannot recreate.
+- **Three strategies per target.** *Wipe Contents* empties the directory and lets the daemon rebuild it; *Delete Databases Only* removes just database files (`.db`, `.sqlite`, `.sqlite3`, `.sqlite-shm`, `.sqlite-wal`, `.segb`); *Lock with Immutable File* replaces the directory with a locked empty file the daemon cannot recreate. A locked target is left alone by the other two strategies — the only ways to remove a lock are the Unlock button in Settings → Targets and the recovery script.
 - **Dry run.** Reports every target, the action that would run, and the item count and byte size at risk, before anything is touched.
-- **Scheduled cleaning.** Every 1, 2, 4, 8, 12 or 24 hours, or manual only. The scheduler re-checks after the Mac wakes and runs a catch-up clean if a fire was missed while the app was closed. Unattended runs downgrade locking to a plain wipe unless you explicitly allow it.
-- **Menu bar only.** No dock icon. An optional global shortcut (⌘⌃B) opens it from anywhere — off by default, enabled in Settings → Preferences.
-- **Recovery built in.** [`Scripts/unbrick.sh`](Scripts/unbrick.sh) reverses every lock and is generated from the same target registry the app cleans from, so it cannot drift. The app can also take an APFS local snapshot before it cleans.
+- **Scheduled cleaning.** Every 1, 2, 4, 8, 12 or 24 hours, or manual only. The scheduler re-checks after the Mac wakes and runs a catch-up clean if a fire was missed while the app was closed; an install that has never cleaned waits for its first scheduled fire. Unattended runs downgrade locking to a plain wipe unless you explicitly allow it.
+- **Menu bar only.** No Dock icon while idle; it appears only while the Settings, About or setup window is open. An optional global shortcut (⌘⌃B) opens it from anywhere — off by default, enabled in Settings → Preferences.
+- **Recovery built in.** [`Scripts/unbrick.sh`](Scripts/unbrick.sh) reverses every lock and is generated from the same target registry the app cleans from, so it cannot drift. The app can also take an APFS local snapshot on request, during setup or from Settings → Preferences → Data.
 - **Guardrails.** Filesystem operations are refused unless the path resolves inside `~/Library` with no symlinked ancestor. A self-test reports which targets are reachable, missing, locked, or blocked by missing permissions.
 
 ## Get it
@@ -50,7 +50,7 @@ brew install adamxbot/tap/bananablitz
 
 The tap is currently serving 0.0.2 while the latest release is v0.0.3 — if you want the newest build today, take the DMG.
 
-**Direct download:** the signed and notarised DMG attached to the [latest release](https://github.com/adamXbot/BananaBlitz/releases/latest).
+**Direct download:** the DMG attached to the [latest release](https://github.com/adamXbot/BananaBlitz/releases/latest). Releases v0.0.1 to v0.0.3 were built locally and are ad-hoc signed rather than notarised, so Gatekeeper warns on first open (right-click → Open). Releases cut through [`release.yml`](.github/workflows/release.yml) are Developer ID signed and notarised.
 
 Requires macOS 14 or later. Because macOS protects `~/Library` from sandboxed apps, BananaBlitz ships without the App Sandbox and needs **Full Disk Access** — the onboarding wizard walks you through granting it.
 

@@ -167,6 +167,49 @@ final class SchedulerServiceTests: XCTestCase {
         XCTAssertNotNil(scheduler.nextCleanDate, "next clean date should be set after a run")
         XCTAssertEqual(spy.receivedJobCount, PrivacyTarget.basicTargets.count)
     }
+
+    // MARK: - Catch-up runs only for a *missed* fire
+
+    func test_catchUp_doesNotRunWhenNeverCleaned() {
+        let spy = SpyCleaner()
+        let scheduler = SchedulerService(cleaner: spy)
+        let state = AppState(persistenceURL: tempURL)
+        state.setDefaultTargets(for: .basic)
+        state.notificationStyle = .silent
+        scheduler.attachStateForTesting(state)
+        XCTAssertNil(state.lastCleanDate, "precondition: never cleaned")
+
+        scheduler.catchUpIfOverdue()
+
+        XCTAssertFalse(state.isCurrentlyCleaning, "a never-cleaned install must not start an unattended clean")
+        XCTAssertEqual(spy.receivedJobCount, 0)
+    }
+
+    func test_catchUp_runsWhenAFireWasMissed() {
+        let spy = SpyCleaner()
+        let scheduler = SchedulerService(cleaner: spy)
+        let state = AppState(persistenceURL: tempURL)
+        state.setDefaultTargets(for: .basic)
+        state.notificationStyle = .silent
+        state.lastCleanDate = Date().addingTimeInterval(-2 * state.scheduleInterval.rawValue)
+        scheduler.attachStateForTesting(state)
+
+        let released = expectation(description: "catch-up clean completed")
+        func poll() {
+            if !state.isCurrentlyCleaning {
+                released.fulfill()
+            } else {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.02, execute: poll)
+            }
+        }
+
+        scheduler.catchUpIfOverdue()
+        XCTAssertTrue(state.isCurrentlyCleaning, "an overdue install must catch up immediately")
+        poll()
+        wait(for: [released], timeout: 5)
+
+        XCTAssertEqual(spy.receivedJobCount, PrivacyTarget.basicTargets.count)
+    }
 }
 
 /// Records the jobs it was handed and returns all-success results without

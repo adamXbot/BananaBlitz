@@ -6,6 +6,7 @@ struct TargetListView: View {
 
     @State private var searchText = ""
     @State private var filterLevel: CleaningLevel?
+    @State private var unlockError: String?
 
     var body: some View {
         VStack(spacing: 0) {
@@ -50,6 +51,14 @@ struct TargetListView: View {
                 .padding(.vertical, 8)
             }
         }
+        .alert("Couldn't unlock", isPresented: Binding(
+            get: { unlockError != nil },
+            set: { if !$0 { unlockError = nil } }
+        )) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(unlockError ?? "")
+        }
     }
 
     // MARK: - Level Section
@@ -89,10 +98,12 @@ struct TargetListView: View {
                     size: appState.scanResults[target.id] ?? 0,
                     isEnabled: appState.isTargetEnabled(target),
                     isLocked: appState.lockStates[target.id] ?? false,
+                    isPresent: appState.targetPresence[target.id] ?? true,
                     strategy: appState.strategyFor(target),
                     onToggle: { appState.toggleTarget(target) },
                     onStrategyChange: { appState.setStrategy($0, for: target) },
-                    onVerify: { verify(target) }
+                    onVerify: { verify(target) },
+                    onUnlock: { unlock(target) }
                 )
                 .padding(.horizontal, 8)
             }
@@ -162,15 +173,34 @@ struct TargetListView: View {
         }
     }
 
-    /// Refresh the cached size + lock state for a single target.
+    /// Refresh the cached size, lock state and presence for a single target.
     private func verify(_ target: PrivacyTarget) {
         Task.detached(priority: .userInitiated) {
-            let size = TargetScanner.shared.targetSize(target)
-            let locked = TargetScanner.shared.isLocked(target)
-            await MainActor.run {
-                appState.scanResults[target.id] = size
-                appState.lockStates[target.id] = locked
+            await refreshCaches(for: target)
+        }
+    }
+
+    /// Explicitly remove a BananaBlitz lock. This is the only in-app way to
+    /// unlock — no cleaning strategy removes a lock as a side effect.
+    private func unlock(_ target: PrivacyTarget) {
+        Task.detached(priority: .userInitiated) {
+            do {
+                try PrivacyCleaner.shared.unlock(target: target)
+            } catch {
+                await MainActor.run { unlockError = error.localizedDescription }
             }
+            await refreshCaches(for: target)
+        }
+    }
+
+    private func refreshCaches(for target: PrivacyTarget) async {
+        let size = TargetScanner.shared.targetSize(target)
+        let locked = TargetScanner.shared.isLocked(target)
+        let present = TargetScanner.shared.targetExists(target)
+        await MainActor.run {
+            appState.scanResults[target.id] = size
+            appState.lockStates[target.id] = locked
+            appState.targetPresence[target.id] = present
         }
     }
 }
