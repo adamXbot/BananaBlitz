@@ -6,6 +6,24 @@
       parallelizeBuildables = "YES"
       buildImplicitDependencies = "YES"
       runPostActionsOnFailure = "NO">
+      <PreActions>
+         <ExecutionAction
+            ActionType = "Xcode.IDEStandardExecutionActionsCore.ExecutionActionType.ShellScriptAction">
+            <ActionContent
+               title = "Capture shared build identity"
+               scriptText = "env -u SDKROOT /usr/bin/python3 &quot;$SRCROOT/Scripts/prepare-build-info.py&quot; session">
+               <EnvironmentBuildable>
+                  <BuildableReference
+                     BuildableIdentifier = "primary"
+                     BlueprintIdentifier = "497A5C6D5706E9CA348D637A"
+                     BuildableName = "BananaBlitz.app"
+                     BlueprintName = "BananaBlitz"
+                     ReferencedContainer = "container:BananaBlitz.xcodeproj">
+                  </BuildableReference>
+               </EnvironmentBuildable>
+            </ActionContent>
+         </ExecutionAction>
+      </PreActions>
       <BuildActionEntries>
          <BuildActionEntry
             buildForTesting = "YES"

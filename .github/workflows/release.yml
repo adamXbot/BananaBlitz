@@ -1,7 +1,7 @@
 name: Release
 
 # Triggered by pushing a tag matching `v<semver>` (e.g. v1.1.0). The
-# tag name becomes the release version; MARKETING_VERSION in project.yml
+# tag name becomes the release version; MARKETING_VERSION in Config/Shared.xcconfig
 # must match before the workflow will publish.
 #
 # Outputs:
@@ -51,10 +51,9 @@ jobs:
       - name: Verify tag matches MARKETING_VERSION
         run: |
           TAG_VERSION="${GITHUB_REF#refs/tags/v}"
-          PROJECT_VERSION=$(grep -E '^[[:space:]]*MARKETING_VERSION:' project.yml \
-            | head -1 | sed -E 's/.*"([^"]+)".*/\1/')
+          PROJECT_VERSION=$(sed -nE 's/^MARKETING_VERSION[[:space:]]*=[[:space:]]*([0-9.]+).*/\1/p' Config/Shared.xcconfig | head -1)
           if [[ "$TAG_VERSION" != "$PROJECT_VERSION" ]]; then
-            echo "::error ::tag $TAG_VERSION does not match MARKETING_VERSION $PROJECT_VERSION in project.yml"
+            echo "::error ::tag $TAG_VERSION does not match MARKETING_VERSION $PROJECT_VERSION in Config/Shared.xcconfig"
             exit 1
           fi
           echo "MARKETING_VERSION=$PROJECT_VERSION" >> "$GITHUB_ENV"
