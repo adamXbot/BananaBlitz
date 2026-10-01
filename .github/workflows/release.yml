@@ -24,12 +24,17 @@ on:
     tags:
       - 'v*'
 
+permissions:
+  contents: read
+  checks: read
+
 jobs:
   build:
     runs-on: macos-15
 
     permissions:
       contents: write
+      checks: read
 
     steps:
       - name: Check out source
@@ -72,9 +77,11 @@ jobs:
           security import "$RUNNER_TEMP/cert.p12" \
             -P "$CERT_PASSWORD" \
             -A -t cert -f pkcs12 -k "$KEYCHAIN_PATH"
-          security list-keychain -d user -s \
-            "$KEYCHAIN_PATH" \
-            $(security list-keychains -d user | tr -d '"')
+          keychains=("$KEYCHAIN_PATH")
+          while IFS= read -r keychain; do
+            [[ -z "$keychain" ]] || keychains+=("$keychain")
+          done < <(security list-keychains -d user | sed -E 's/^[[:space:]]*"//; s/"[[:space:]]*$//')
+          security list-keychains -d user -s "${keychains[@]}"
           rm "$RUNNER_TEMP/cert.p12"
 
       - name: Build, sign, and notarize DMG
@@ -82,6 +89,7 @@ jobs:
           APPLE_NOTARY_USER:     ${{ secrets.APPLE_NOTARY_USER }}
           APPLE_NOTARY_PASSWORD: ${{ secrets.APPLE_NOTARY_PASSWORD }}
           APPLE_NOTARY_TEAM_ID:  ${{ secrets.APPLE_NOTARY_TEAM_ID }}
+          GH_TOKEN: ${{ github.token }}
         run: ./Scripts/release.sh
 
       - name: Install Sparkle CLI tools
@@ -91,6 +99,14 @@ jobs:
         env:
           SPARKLE_PRIVATE_KEY: ${{ secrets.SPARKLE_PRIVATE_KEY }}
         run: ./Scripts/generate-appcast.sh ./dist
+
+      - name: Verify publication package before uploading
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          for dmg in dist/*.dmg; do
+            python3 .project/projectctl.py artifact-verify "$dmg" --channel release
+          done
 
       - name: Attach DMG to GitHub Release
         uses: softprops/action-gh-release@v3
