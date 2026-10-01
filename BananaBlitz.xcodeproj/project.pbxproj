@@ -93,18 +93,22 @@
 		41FC0A55800955F7B5FF3A7F /* CleaningStrategy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CleaningStrategy.swift; sourceTree = "<group>"; };
 		475B47537280016C908A59F3 /* TargetRowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TargetRowView.swift; sourceTree = "<group>"; };
 		4FD9ECED711067918E8D41FD /* PermissionStepView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PermissionStepView.swift; sourceTree = "<group>"; };
+		55D2A1A1CE3D9B4075286214 /* apple_signing.py */ = {isa = PBXFileReference; lastKnownFileType = text.script.python; path = apple_signing.py; sourceTree = "<group>"; };
 		58DEC8672BB0020FB0954F75 /* DryRunSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DryRunSheet.swift; sourceTree = "<group>"; };
 		5A43F0620A5A81B210F3B2EC /* PrivacyTarget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrivacyTarget.swift; sourceTree = "<group>"; };
 		5AA5CBB296DE358249DF36A0 /* FileSystemGuard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileSystemGuard.swift; sourceTree = "<group>"; };
+		5B303D14994120308B211A4C /* test_archive_signing.py */ = {isa = PBXFileReference; lastKnownFileType = text.script.python; path = test_archive_signing.py; sourceTree = "<group>"; };
 		5B4DC1970F50185CCEEF4C26 /* SizeLabel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SizeLabel.swift; sourceTree = "<group>"; };
 		5D297ECFA9D05F9CEC728E12 /* LevelPickerStepView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LevelPickerStepView.swift; sourceTree = "<group>"; };
 		5F1728D79FEAE14A2F4FC099 /* AboutView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AboutView.swift; sourceTree = "<group>"; };
 		6081ACDB5DA4B0B9B8D699F0 /* UpdaterService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpdaterService.swift; sourceTree = "<group>"; };
 		65CDF55FBE14158172846EC9 /* BananaBlitz.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = BananaBlitz.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		6780A22DDAFDE3203EDE5D4D /* build_identity.rb */ = {isa = PBXFileReference; lastKnownFileType = text.script.ruby; path = build_identity.rb; sourceTree = "<group>"; };
+		6CBE78DA1DD3CDE0F1D12057 /* test_account_signing.py */ = {isa = PBXFileReference; lastKnownFileType = text.script.python; path = test_account_signing.py; sourceTree = "<group>"; };
 		6E208753D76A4BECEC356DE5 /* test-fastlane-identity.rb */ = {isa = PBXFileReference; lastKnownFileType = text.script.ruby; path = "test-fastlane-identity.rb"; sourceTree = "<group>"; };
 		7191D68507323BCB21CB7E00 /* SelfTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SelfTest.swift; sourceTree = "<group>"; };
 		71C3E70F7CE45F79084B16EA /* PathSafety.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PathSafety.swift; sourceTree = "<group>"; };
+		72FEAB319320897B092499EB /* test_apple_signing.py */ = {isa = PBXFileReference; lastKnownFileType = text.script.python; path = test_apple_signing.py; sourceTree = "<group>"; };
 		7420ECB092874BEE42D53B4E /* verify-archive.py */ = {isa = PBXFileReference; lastKnownFileType = text.script.python; path = "verify-archive.py"; sourceTree = "<group>"; };
 		74DBE63813C38B4D54CF5E23 /* PermissionChecker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PermissionChecker.swift; sourceTree = "<group>"; };
 		79B51EA37ECD220BD675E46E /* banner.sh */ = {isa = PBXFileReference; lastKnownFileType = text.script.sh; path = banner.sh; sourceTree = "<group>"; };
@@ -132,6 +136,7 @@
 		DA56C545D896CF4823D54C8A /* ScheduleStepView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScheduleStepView.swift; sourceTree = "<group>"; };
 		DC2C54C0A177BB7EB8FE1C11 /* TargetListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TargetListView.swift; sourceTree = "<group>"; };
 		E5172E94F4FCF629C6273FB8 /* OnboardingContainerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingContainerView.swift; sourceTree = "<group>"; };
+		E78C602F23482F30F6D2909F /* test_shell_signing.py */ = {isa = PBXFileReference; lastKnownFileType = text.script.python; path = test_shell_signing.py; sourceTree = "<group>"; };
 		E8B5C1995E6D1BBE894F4261 /* MenuBarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuBarView.swift; sourceTree = "<group>"; };
 		ED60338FDBADB5D306DE88D1 /* SnapshotService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SnapshotService.swift; sourceTree = "<group>"; };
 		EE988712DF2081D894F99E2A /* AppStateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppStateTests.swift; sourceTree = "<group>"; };
@@ -191,6 +196,7 @@
 		4508E4E4B01EEADA4E2636FA /* Scripts */ = {
 			isa = PBXGroup;
 			children = (
+				55D2A1A1CE3D9B4075286214 /* apple_signing.py */,
 				7F3023275158D3321EBB34FE /* archive-app.py */,
 				79B51EA37ECD220BD675E46E /* banner.sh */,
 				6780A22DDAFDE3203EDE5D4D /* build_identity.rb */,
@@ -199,6 +205,10 @@
 				BDFB3ED8EA74BC6519717D90 /* prepare-build-info.py */,
 				963F6848EDCA5A7F903E3EF4 /* regenerate-app-icons.sh */,
 				9E6DAC739B3C0B0E2CE07324 /* release.sh */,
+				6CBE78DA1DD3CDE0F1D12057 /* test_account_signing.py */,
+				72FEAB319320897B092499EB /* test_apple_signing.py */,
+				5B303D14994120308B211A4C /* test_archive_signing.py */,
+				E78C602F23482F30F6D2909F /* test_shell_signing.py */,
 				ACAB1EDDF52535A13340F1C6 /* test-archive-command.py */,
 				F513BF897EDDEB1D8D298D50 /* test-build-identity.py */,
 				F99DBAEB2F74BC399E1350A3 /* test-buildinfo.py */,
@@ -354,7 +364,11 @@
 				BuildIndependentTargetsInParallel = YES;
 				LastUpgradeCheck = 1430;
 				TargetAttributes = {
+					49536FA30CA90F602E58DC19 = {
+						DevelopmentTeam = 6S9Q286XS9;
+					};
 					497A5C6D5706E9CA348D637A = {
+						DevelopmentTeam = 6S9Q286XS9;
 						ProvisioningStyle = Manual;
 					};
 				};
@@ -554,6 +568,7 @@
 				COPY_PHASE_STRIP = NO;
 				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = 6S9Q286XS9;
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
@@ -673,6 +688,7 @@
 				COPY_PHASE_STRIP = NO;
 				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = 6S9Q286XS9;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;

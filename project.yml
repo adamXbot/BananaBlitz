@@ -9,6 +9,7 @@ options:
 
 settings:
   base:
+    DEVELOPMENT_TEAM: "6S9Q286XS9"
     SWIFT_VERSION: "5"
     DEAD_CODE_STRIPPING: YES
     # Sandbox custom Run Script build phases. Free correctness win — no
