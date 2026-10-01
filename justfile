@@ -27,3 +27,7 @@ release-local:
 [group("dev")]
 clean:
     rm -rf dist TestResults.xcresult
+
+# Regenerate the project, Archive, and verify its app/extension build identity.
+archive platform="macos":
+    python3 Scripts/archive-app.py --platform {{quote(platform)}}

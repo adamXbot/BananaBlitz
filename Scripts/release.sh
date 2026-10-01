@@ -32,15 +32,14 @@ EXPORT_PATH="$REPO_ROOT/dist/export"
 DIST_DIR="$REPO_ROOT/dist"
 mkdir -p "$DIST_DIR"
 
-# ── 1. Resolve the version from project.yml ────────────────────────
-# MARKETING_VERSION in project.yml is the canonical version. The
+# ── 1. Read the canonical marketing version ────────────────────────
+# MARKETING_VERSION in Config/Shared.xcconfig is the canonical version. The
 # Info.plist references it via $(MARKETING_VERSION) substitution, so
 # reading the plist directly returns the literal string. The
 # variable's actual value lives here.
-VERSION="$(grep -E '^[[:space:]]*MARKETING_VERSION:' "$REPO_ROOT/project.yml" \
-  | head -1 | sed -E 's/.*"([^"]+)".*/\1/')"
+VERSION="$(sed -nE 's/^MARKETING_VERSION[[:space:]]*=[[:space:]]*([0-9.]+).*/\1/p' "$REPO_ROOT/Config/Shared.xcconfig" | head -1)"
 if [[ -z "$VERSION" ]]; then
-  echo "error: could not read MARKETING_VERSION from project.yml" >&2
+  echo "error: could not read MARKETING_VERSION from Config/Shared.xcconfig" >&2
   exit 2
 fi
 echo "Building BananaBlitz v$VERSION"

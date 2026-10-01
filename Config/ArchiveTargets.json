@@ -1,0 +1,11 @@
+{
+  "project": "BananaBlitz.xcodeproj",
+  "spec": "project.yml",
+  "defaultPlatform": "macos",
+  "platforms": {
+    "macos": {
+      "scheme": "BananaBlitz",
+      "destination": "generic/platform=macOS"
+    }
+  }
+}

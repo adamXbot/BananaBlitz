@@ -83,8 +83,10 @@
 		3061B5DB2CCA56B4513DB078 /* Color+Brand.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Color+Brand.swift"; sourceTree = "<group>"; };
 		3141B508FBA6DB813DA14377 /* DryRunTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DryRunTests.swift; sourceTree = "<group>"; };
 		31514E94FD6C8886E0E7F85B /* CleanButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CleanButton.swift; sourceTree = "<group>"; };
+		3469AA705919E0CDF93CCABA /* Shared.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Shared.xcconfig; sourceTree = "<group>"; };
 		39BC563898E9FDFFD7832C54 /* DryRun.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DryRun.swift; sourceTree = "<group>"; };
 		3A5BD8D3427FDED33C084E99 /* CleaningResult.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CleaningResult.swift; sourceTree = "<group>"; };
+		3D25CE873EA57AEBAD83BAF0 /* generate-appcast.sh */ = {isa = PBXFileReference; lastKnownFileType = text.script.sh; path = "generate-appcast.sh"; sourceTree = "<group>"; };
 		3DAAAD84688C64B020D9A7C8 /* SchedulerService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SchedulerService.swift; sourceTree = "<group>"; };
 		3FE179BD151ECD3BF532C3B5 /* FileSystemGuardTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileSystemGuardTests.swift; sourceTree = "<group>"; };
 		41C90FC61468F40C68CA9B8D /* ScanStepView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScanStepView.swift; sourceTree = "<group>"; };
@@ -99,22 +101,32 @@
 		5F1728D79FEAE14A2F4FC099 /* AboutView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AboutView.swift; sourceTree = "<group>"; };
 		6081ACDB5DA4B0B9B8D699F0 /* UpdaterService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpdaterService.swift; sourceTree = "<group>"; };
 		65CDF55FBE14158172846EC9 /* BananaBlitz.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = BananaBlitz.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		6780A22DDAFDE3203EDE5D4D /* build_identity.rb */ = {isa = PBXFileReference; lastKnownFileType = text.script.ruby; path = build_identity.rb; sourceTree = "<group>"; };
+		6E208753D76A4BECEC356DE5 /* test-fastlane-identity.rb */ = {isa = PBXFileReference; lastKnownFileType = text.script.ruby; path = "test-fastlane-identity.rb"; sourceTree = "<group>"; };
 		7191D68507323BCB21CB7E00 /* SelfTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SelfTest.swift; sourceTree = "<group>"; };
 		71C3E70F7CE45F79084B16EA /* PathSafety.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PathSafety.swift; sourceTree = "<group>"; };
+		7420ECB092874BEE42D53B4E /* verify-archive.py */ = {isa = PBXFileReference; lastKnownFileType = text.script.python; path = "verify-archive.py"; sourceTree = "<group>"; };
 		74DBE63813C38B4D54CF5E23 /* PermissionChecker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PermissionChecker.swift; sourceTree = "<group>"; };
+		79B51EA37ECD220BD675E46E /* banner.sh */ = {isa = PBXFileReference; lastKnownFileType = text.script.sh; path = banner.sh; sourceTree = "<group>"; };
 		7D17B45C2A13F3A4EF9DDB7C /* CleaningLevel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CleaningLevel.swift; sourceTree = "<group>"; };
+		7F3023275158D3321EBB34FE /* archive-app.py */ = {isa = PBXFileReference; lastKnownFileType = text.script.python; path = "archive-app.py"; sourceTree = "<group>"; };
 		8342D8731EE9B3E3708471DC /* BananaBlitzApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BananaBlitzApp.swift; sourceTree = "<group>"; };
 		8CCF51EBB78DD52C32D08F90 /* LoginItemService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginItemService.swift; sourceTree = "<group>"; };
 		8F5D85902F4ACD040856A6FC /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		9424CBE160079594F3F60A7B /* buildinfo.sh */ = {isa = PBXFileReference; lastKnownFileType = text.script.sh; path = buildinfo.sh; sourceTree = "<group>"; };
+		963F6848EDCA5A7F903E3EF4 /* regenerate-app-icons.sh */ = {isa = PBXFileReference; lastKnownFileType = text.script.sh; path = "regenerate-app-icons.sh"; sourceTree = "<group>"; };
 		96B8BA04DE5D8459D35F2D31 /* LevelBadge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LevelBadge.swift; sourceTree = "<group>"; };
 		9C49A41AF4B376DCDF26DB3A /* AppActivator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppActivator.swift; sourceTree = "<group>"; };
 		9CA97C8CD2DBFBC78B4A9012 /* SchedulerServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SchedulerServiceTests.swift; sourceTree = "<group>"; };
+		9E6DAC739B3C0B0E2CE07324 /* release.sh */ = {isa = PBXFileReference; lastKnownFileType = text.script.sh; path = release.sh; sourceTree = "<group>"; };
 		9EC637D721318995C7E58D0D /* Logging.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Logging.swift; sourceTree = "<group>"; };
 		A6519EC7826C7792D1D2CED3 /* SnapshotStepView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SnapshotStepView.swift; sourceTree = "<group>"; };
 		AABC9C525043D8F999B1518D /* PrivacyCleanerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrivacyCleanerTests.swift; sourceTree = "<group>"; };
 		ABD45398FA2E17BC73E4D08F /* AppState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppState.swift; sourceTree = "<group>"; };
+		ACAB1EDDF52535A13340F1C6 /* test-archive-command.py */ = {isa = PBXFileReference; lastKnownFileType = text.script.python; path = "test-archive-command.py"; sourceTree = "<group>"; };
 		B3C42AA47D05B968800F9675 /* UnbrickScriptGenerator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UnbrickScriptGenerator.swift; sourceTree = "<group>"; };
 		B7F73D43CE93B468A919F661 /* TargetScanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TargetScanner.swift; sourceTree = "<group>"; };
+		BDFB3ED8EA74BC6519717D90 /* prepare-build-info.py */ = {isa = PBXFileReference; lastKnownFileType = text.script.python; path = "prepare-build-info.py"; sourceTree = "<group>"; };
 		C2E79ED62287B0AC75263B6C /* CleanStepView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CleanStepView.swift; sourceTree = "<group>"; };
 		D40BB22D5AC9874B21641C80 /* HistoryExporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryExporter.swift; sourceTree = "<group>"; };
 		DA56C545D896CF4823D54C8A /* ScheduleStepView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScheduleStepView.swift; sourceTree = "<group>"; };
@@ -123,6 +135,7 @@
 		E8B5C1995E6D1BBE894F4261 /* MenuBarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuBarView.swift; sourceTree = "<group>"; };
 		ED60338FDBADB5D306DE88D1 /* SnapshotService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SnapshotService.swift; sourceTree = "<group>"; };
 		EE988712DF2081D894F99E2A /* AppStateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppStateTests.swift; sourceTree = "<group>"; };
+		F513BF897EDDEB1D8D298D50 /* test-build-identity.py */ = {isa = PBXFileReference; lastKnownFileType = text.script.python; path = "test-build-identity.py"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -168,6 +181,7 @@
 			children = (
 				58B9FD80E5FDE9B6B3D36562 /* BananaBlitz */,
 				38B37543BCEF59978E1506A8 /* BananaBlitzTests */,
+				69D8B72E4DA85AB3E876B576 /* Config */,
 				4508E4E4B01EEADA4E2636FA /* Scripts */,
 				67170EEB67C2AB722BE774CA /* Products */,
 			);
@@ -176,7 +190,19 @@
 		4508E4E4B01EEADA4E2636FA /* Scripts */ = {
 			isa = PBXGroup;
 			children = (
+				7F3023275158D3321EBB34FE /* archive-app.py */,
+				79B51EA37ECD220BD675E46E /* banner.sh */,
+				6780A22DDAFDE3203EDE5D4D /* build_identity.rb */,
+				9424CBE160079594F3F60A7B /* buildinfo.sh */,
+				3D25CE873EA57AEBAD83BAF0 /* generate-appcast.sh */,
+				BDFB3ED8EA74BC6519717D90 /* prepare-build-info.py */,
+				963F6848EDCA5A7F903E3EF4 /* regenerate-app-icons.sh */,
+				9E6DAC739B3C0B0E2CE07324 /* release.sh */,
+				ACAB1EDDF52535A13340F1C6 /* test-archive-command.py */,
+				F513BF897EDDEB1D8D298D50 /* test-build-identity.py */,
+				6E208753D76A4BECEC356DE5 /* test-fastlane-identity.rb */,
 				2C2E594981EAF44413A78232 /* unbrick.sh */,
+				7420ECB092874BEE42D53B4E /* verify-archive.py */,
 			);
 			path = Scripts;
 			sourceTree = "<group>";
@@ -227,6 +253,14 @@
 				0802EA6315CD03429B281238 /* BananaBlitzTests.xctest */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		69D8B72E4DA85AB3E876B576 /* Config */ = {
+			isa = PBXGroup;
+			children = (
+				3469AA705919E0CDF93CCABA /* Shared.xcconfig */,
+			);
+			path = Config;
 			sourceTree = "<group>";
 		};
 		B34074A32CA01799178FB6CD /* Services */ = {
@@ -292,6 +326,7 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = 1D461475F9F1C9D42E24C34B /* Build configuration list for PBXNativeTarget "BananaBlitz" */;
 			buildPhases = (
+				4D55ADAE2E1003EFDC067EAA /* Prepare version and build identity */,
 				FCCC98FA9CF394EA0ED03B80 /* Sources */,
 				ACBCF39A46860D72BBC05EDF /* Resources */,
 				E82DB73B70FF3C0E70A90D45 /* Frameworks */,
@@ -356,6 +391,32 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		4D55ADAE2E1003EFDC067EAA /* Prepare version and build identity */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+				"$(SRCROOT)/Scripts/prepare-build-info.py",
+				"$(PROJECT_TEMP_DIR)/BuildIdentity.plist",
+				"$(SRCROOT)/BananaBlitz/Info.plist",
+			);
+			name = "Prepare version and build identity";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+				"$(DERIVED_FILE_DIR)/BuildIdentity-Info.plist",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "env -u SDKROOT /usr/bin/python3 \"$SRCROOT/Scripts/prepare-build-info.py\" plist";
+		};
+/* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		C702214A7C0AAF8C26B85862 /* Sources */ = {
@@ -435,20 +496,19 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				BUILD_IDENTITY_SOURCE_PLIST = "$(SRCROOT)/BananaBlitz/Info.plist";
 				CODE_SIGN_ENTITLEMENTS = BananaBlitz/BananaBlitz.entitlements;
 				CODE_SIGN_IDENTITY = "-";
 				CODE_SIGN_STYLE = Manual;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 1;
 				ENABLE_APP_SANDBOX = NO;
 				GENERATE_INFOPLIST_FILE = NO;
-				INFOPLIST_FILE = BananaBlitz/Info.plist;
+				INFOPLIST_FILE = "$(DERIVED_FILE_DIR)/BuildIdentity-Info.plist";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 1.0.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.bananablitz.app;
 				SDKROOT = macosx;
 			};
@@ -456,6 +516,7 @@
 		};
 		7DB1F933264EE2805943B7BF /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 3469AA705919E0CDF93CCABA /* Shared.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = NO;
@@ -554,20 +615,19 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				BUILD_IDENTITY_SOURCE_PLIST = "$(SRCROOT)/BananaBlitz/Info.plist";
 				CODE_SIGN_ENTITLEMENTS = BananaBlitz/BananaBlitz.entitlements;
 				CODE_SIGN_IDENTITY = "-";
 				CODE_SIGN_STYLE = Manual;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 1;
 				ENABLE_APP_SANDBOX = NO;
 				GENERATE_INFOPLIST_FILE = NO;
-				INFOPLIST_FILE = BananaBlitz/Info.plist;
+				INFOPLIST_FILE = "$(DERIVED_FILE_DIR)/BuildIdentity-Info.plist";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 1.0.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.bananablitz.app;
 				SDKROOT = macosx;
 			};
@@ -575,6 +635,7 @@
 		};
 		D24A743DD5F13D2BD820B52F /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 3469AA705919E0CDF93CCABA /* Shared.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = NO;
