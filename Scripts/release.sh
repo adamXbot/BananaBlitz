@@ -30,6 +30,15 @@ if [[ "${APPLE_SIGNING_LOADED:-}" != "1" ]]; then
 fi
 
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+# Verify publication before signing/notarization; capture source before compilation.
+project_command() {
+  python3 "$REPO_ROOT/.project/projectctl.py" --config "$REPO_ROOT/.project/commands.json" "$@"
+}
+project_command source-check --channel release
+PROJECT_SOURCE_RECORD="$(mktemp -t project-release-source)"
+project_command source-capture "$PROJECT_SOURCE_RECORD"
+trap 'rm -f "$PROJECT_SOURCE_RECORD"' EXIT
+
 cd "$REPO_ROOT"
 
 SCHEME="${SCHEME:-BananaBlitz}"
@@ -95,6 +104,8 @@ xcodebuild \
   OTHER_CODE_SIGN_FLAGS='--timestamp --options=runtime' \
   archive
 
+project_command record-artifact "$ARCHIVE_PATH" --source-record "$PROJECT_SOURCE_RECORD"
+
 # ── 4. Export the .app from the archive ────────────────────────────
 EXPORT_OPTIONS_PLIST="$REPO_ROOT/dist/ExportOptions.plist"
 cat > "$EXPORT_OPTIONS_PLIST" <<EOF
@@ -132,12 +143,15 @@ xcrun notarytool submit "$ZIP_PATH" \
 # Staple so Gatekeeper can verify offline.
 xcrun stapler staple "$APP_PATH"
 xcrun stapler validate "$APP_PATH"
+project_command record-artifact "$APP_PATH" --source-record "$PROJECT_SOURCE_RECORD"
+project_command artifact-verify "$APP_PATH" --channel release
+
 
 # ── 6. Build the DMG ───────────────────────────────────────────────
 DMG_PATH="$DIST_DIR/BananaBlitz-$VERSION.dmg"
 rm -f "$DMG_PATH"
 DMG_STAGING="$(mktemp -d)"
-trap 'rm -rf "$DMG_STAGING"' EXIT
+trap 'rm -rf "$DMG_STAGING"; rm -f "$PROJECT_SOURCE_RECORD"' EXIT
 cp -R "$APP_PATH" "$DMG_STAGING/"
 ln -s /Applications "$DMG_STAGING/Applications"
 
@@ -154,6 +168,8 @@ xcrun notarytool submit "$DMG_PATH" \
   "${notary_auth[@]}" \
   --wait
 xcrun stapler staple "$DMG_PATH"
+project_command record-package "$DMG_PATH" --from-artifact "$APP_PATH" --channel release
+
 
 echo
 echo "──────────────────────────────────────────────"
