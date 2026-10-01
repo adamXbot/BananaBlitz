@@ -1,3 +1,4 @@
+# Shared Apple signing settings: docs/apple-signing.md
 # List available commands
 default:
     @just --list
@@ -35,3 +36,8 @@ archive platform="macos":
 # Show the UTC build preview, commit, dirty files, tag-at-HEAD and channel.
 info:
     @Scripts/banner.sh "BananaBlitz"
+
+# Shared machine-wide Apple settings; no build or upload.
+[group("release")]
+release-check:
+    python3 Scripts/apple_signing.py --check

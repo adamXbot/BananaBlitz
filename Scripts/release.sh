@@ -22,6 +22,11 @@
 
 set -euo pipefail
 
+# Load the shared settings once, including when invoked outside just.
+if [[ "${APPLE_SIGNING_LOADED:-}" != "1" ]]; then
+  exec python3 "$(dirname "$0")/apple_signing.py" --exec bash "$0" "$@"
+fi
+
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$REPO_ROOT"
 
@@ -51,13 +56,28 @@ if [[ ! -d "$REPO_ROOT/BananaBlitz.xcodeproj" ]]; then
 fi
 
 # ── 2. Resolve the signing identity ────────────────────────────────
-DEVELOPER_ID="${DEVELOPER_ID:-$(security find-identity -v -p codesigning \
-  | awk -F'"' '/Developer ID Application/ {print $2; exit}')}"
+DEVELOPER_ID="${APPLE_DEVELOPER_ID_IDENTITY:-${DEVELOPER_ID:-$(security find-identity -v -p codesigning \
+  | awk -F'"' '/Developer ID Application/ {print $2; exit}')}}"
 if [[ -z "$DEVELOPER_ID" ]]; then
   echo "error: no Developer ID Application identity found in keychain" >&2
   exit 2
 fi
 echo "Signing as: $DEVELOPER_ID"
+
+certificate_team="$(printf '%s' "$DEVELOPER_ID" | sed -nE 's/.*\(([A-Z0-9]{10})\)$/\1/p')"
+TEAM_ID="${APPLE_TEAM_ID:-$certificate_team}"
+if [[ -z "$certificate_team" || "$TEAM_ID" != "$certificate_team" ]]; then
+  echo "error: configured Apple team does not match a Developer ID Application certificate" >&2
+  exit 2
+fi
+if [[ -n "${APPLE_API_KEY_PATH:-}" ]]; then
+  python3 Scripts/apple_signing.py --api-check
+  notary_auth=(--key "$APPLE_API_KEY_PATH" --key-id "$APPLE_API_KEY_ID" --issuer "$APPLE_API_ISSUER")
+else
+  : "${APPLE_NOTARY_USER:?set APPLE_NOTARY_USER or the shared API key}"
+  : "${APPLE_NOTARY_PASSWORD:?set APPLE_NOTARY_PASSWORD or the shared API key}"
+  notary_auth=(--apple-id "$APPLE_NOTARY_USER" --password "$APPLE_NOTARY_PASSWORD" --team-id "$TEAM_ID")
+fi
 
 # ── 3. Archive the app target ──────────────────────────────────────
 xcodebuild \
@@ -67,6 +87,7 @@ xcodebuild \
   -destination 'generic/platform=macOS' \
   CODE_SIGN_IDENTITY="$DEVELOPER_ID" \
   CODE_SIGN_STYLE=Manual \
+  DEVELOPMENT_TEAM="$TEAM_ID" \
   ENABLE_HARDENED_RUNTIME=YES \
   OTHER_CODE_SIGN_FLAGS='--timestamp --options=runtime' \
   archive
@@ -80,6 +101,7 @@ cat > "$EXPORT_OPTIONS_PLIST" <<EOF
 <plist version="1.0">
 <dict>
   <key>method</key>            <string>developer-id</string>
+  <key>teamID</key>            <string>${TEAM_ID}</string>
   <key>signingStyle</key>      <string>manual</string>
   <key>signingCertificate</key><string>Developer ID Application</string>
 </dict>
@@ -101,9 +123,7 @@ ZIP_PATH="$DIST_DIR/${SCHEME}-notarize.zip"
 ditto -c -k --sequesterRsrc --keepParent "$APP_PATH" "$ZIP_PATH"
 
 xcrun notarytool submit "$ZIP_PATH" \
-  --apple-id    "$APPLE_NOTARY_USER" \
-  --password    "$APPLE_NOTARY_PASSWORD" \
-  --team-id     "$APPLE_NOTARY_TEAM_ID" \
+  "${notary_auth[@]}" \
   --wait
 
 # Staple so Gatekeeper can verify offline.
@@ -128,9 +148,7 @@ hdiutil create \
 # first open.
 codesign --force --sign "$DEVELOPER_ID" "$DMG_PATH"
 xcrun notarytool submit "$DMG_PATH" \
-  --apple-id    "$APPLE_NOTARY_USER" \
-  --password    "$APPLE_NOTARY_PASSWORD" \
-  --team-id     "$APPLE_NOTARY_TEAM_ID" \
+  "${notary_auth[@]}" \
   --wait
 xcrun stapler staple "$DMG_PATH"
 
