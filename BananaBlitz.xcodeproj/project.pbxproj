@@ -104,6 +104,7 @@
 		6081ACDB5DA4B0B9B8D699F0 /* UpdaterService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpdaterService.swift; sourceTree = "<group>"; };
 		65CDF55FBE14158172846EC9 /* BananaBlitz.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = BananaBlitz.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		6780A22DDAFDE3203EDE5D4D /* build_identity.rb */ = {isa = PBXFileReference; lastKnownFileType = text.script.ruby; path = build_identity.rb; sourceTree = "<group>"; };
+		6CBE78DA1DD3CDE0F1D12057 /* test_account_signing.py */ = {isa = PBXFileReference; lastKnownFileType = text.script.python; path = test_account_signing.py; sourceTree = "<group>"; };
 		6E208753D76A4BECEC356DE5 /* test-fastlane-identity.rb */ = {isa = PBXFileReference; lastKnownFileType = text.script.ruby; path = "test-fastlane-identity.rb"; sourceTree = "<group>"; };
 		7191D68507323BCB21CB7E00 /* SelfTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SelfTest.swift; sourceTree = "<group>"; };
 		71C3E70F7CE45F79084B16EA /* PathSafety.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PathSafety.swift; sourceTree = "<group>"; };
@@ -204,6 +205,7 @@
 				BDFB3ED8EA74BC6519717D90 /* prepare-build-info.py */,
 				963F6848EDCA5A7F903E3EF4 /* regenerate-app-icons.sh */,
 				9E6DAC739B3C0B0E2CE07324 /* release.sh */,
+				6CBE78DA1DD3CDE0F1D12057 /* test_account_signing.py */,
 				72FEAB319320897B092499EB /* test_apple_signing.py */,
 				5B303D14994120308B211A4C /* test_archive_signing.py */,
 				E78C602F23482F30F6D2909F /* test_shell_signing.py */,

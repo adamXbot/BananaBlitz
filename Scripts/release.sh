@@ -9,10 +9,12 @@
 # Outputs:
 #   dist/BananaBlitz-<version>.dmg — signed + notarized + stapled
 #
-# Required environment:
-#   APPLE_NOTARY_USER           Apple ID for notarytool.
-#   APPLE_NOTARY_PASSWORD       App-specific password.
-#   APPLE_NOTARY_TEAM_ID        Apple Developer team ID.
+# Notarization credentials (loaded from ~/.config/apple/signing.env):
+#   APPLE_NOTARY_PROFILE        Preferred: saved notarytool Keychain profile.
+#   or APPLE_API_KEY_PATH/APPLE_API_KEY_ID/APPLE_API_ISSUER
+#   or APPLE_NOTARY_USER/APPLE_NOTARY_PASSWORD/APPLE_TEAM_ID.
+# Xcode account login handles signing/provisioning; notarization is separate.
+# See docs/apple-signing.md.
 #
 # Optional:
 #   DEVELOPER_ID                Override the Developer ID common name
@@ -70,14 +72,15 @@ if [[ -z "$certificate_team" || "$TEAM_ID" != "$certificate_team" ]]; then
   echo "error: configured Apple team does not match a Developer ID Application certificate" >&2
   exit 2
 fi
-if [[ -n "${APPLE_API_KEY_PATH:-}" ]]; then
-  python3 Scripts/apple_signing.py --api-check
-  notary_auth=(--key "$APPLE_API_KEY_PATH" --key-id "$APPLE_API_KEY_ID" --issuer "$APPLE_API_ISSUER")
-else
-  : "${APPLE_NOTARY_USER:?set APPLE_NOTARY_USER or the shared API key}"
-  : "${APPLE_NOTARY_PASSWORD:?set APPLE_NOTARY_PASSWORD or the shared API key}"
-  notary_auth=(--apple-id "$APPLE_NOTARY_USER" --password "$APPLE_NOTARY_PASSWORD" --team-id "$TEAM_ID")
+# Resolve notarization independently from Xcode provisioning before archiving.
+notary_arguments_file="$(mktemp)"
+if ! python3 "$REPO_ROOT/Scripts/apple_signing.py" --notary-args > "$notary_arguments_file"; then
+  rm -f "$notary_arguments_file"
+  exit 2
 fi
+notary_auth=()
+while IFS= read -r -d '' argument; do notary_auth+=("$argument"); done < "$notary_arguments_file"
+rm -f "$notary_arguments_file"
 
 # ── 3. Archive the app target ──────────────────────────────────────
 xcodebuild \
