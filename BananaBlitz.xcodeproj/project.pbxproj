@@ -136,6 +136,7 @@
 		ED60338FDBADB5D306DE88D1 /* SnapshotService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SnapshotService.swift; sourceTree = "<group>"; };
 		EE988712DF2081D894F99E2A /* AppStateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppStateTests.swift; sourceTree = "<group>"; };
 		F513BF897EDDEB1D8D298D50 /* test-build-identity.py */ = {isa = PBXFileReference; lastKnownFileType = text.script.python; path = "test-build-identity.py"; sourceTree = "<group>"; };
+		F99DBAEB2F74BC399E1350A3 /* test-buildinfo.py */ = {isa = PBXFileReference; lastKnownFileType = text.script.python; path = "test-buildinfo.py"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -200,6 +201,7 @@
 				9E6DAC739B3C0B0E2CE07324 /* release.sh */,
 				ACAB1EDDF52535A13340F1C6 /* test-archive-command.py */,
 				F513BF897EDDEB1D8D298D50 /* test-build-identity.py */,
+				F99DBAEB2F74BC399E1350A3 /* test-buildinfo.py */,
 				6E208753D76A4BECEC356DE5 /* test-fastlane-identity.rb */,
 				2C2E594981EAF44413A78232 /* unbrick.sh */,
 				7420ECB092874BEE42D53B4E /* verify-archive.py */,
