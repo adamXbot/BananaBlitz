@@ -2,7 +2,9 @@
 import SwiftUI
 
 /// The updater calls the surfaces need. Sparkle's `SPUUpdater` already has
-/// every member; see SurfaceSparkle.swift.
+/// every member; see SurfaceSparkle.swift. Main-actor isolated, as Sparkle's
+/// updater is.
+@MainActor
 public protocol SurfaceUpdateDriver: AnyObject {
     var canCheckForUpdates: Bool { get }
     var automaticallyChecksForUpdates: Bool { get set }
