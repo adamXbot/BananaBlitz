@@ -113,6 +113,9 @@
       "description": "gen",
       "alias": "generate"
     },
+    "surfaces": {
+      "description": "Copy the shared Settings, menu and About code into this app"
+    },
     "release": {
       "description": "Create and trigger a versioned release"
     },
@@ -149,6 +152,16 @@
             "argv": [
               "bash",
               "Scripts/release.sh"
+            ],
+            "cwd": "."
+          }
+        ],
+        "surfaces": [
+          {
+            "argv": [
+              "python3",
+              ".project/mac_surfaces.py",
+              "sync"
             ],
             "cwd": "."
           }
