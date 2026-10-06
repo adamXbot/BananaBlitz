@@ -16,7 +16,9 @@ public enum SurfaceMarkdownBlock: Hashable, Sendable {
 
 /// The small Markdown subset manual pages use: headings, paragraphs, bullet
 /// and numbered lists, fenced code, quotes, rules, images on their own line,
-/// and inline emphasis, code and links inside text.
+/// and inline emphasis, code and links inside text. A list item wrapped over
+/// several indented lines is one item; a blank line or unindented prose ends
+/// the list.
 public enum SurfaceMarkdown {
     public static func parse(_ text: String) -> [SurfaceMarkdownBlock] {
         var blocks: [SurfaceMarkdownBlock] = []
@@ -60,6 +62,15 @@ public enum SurfaceMarkdown {
                 flush()
                 let body = String(line.dropFirst(line == ">" ? 1 : 2))
                 if case let .quote(previous)? = blocks.last { blocks[blocks.count - 1] = .quote(previous + " " + body) } else { blocks.append(.quote(body)) }
+                continue
+            }
+            let indented = rawLine.hasPrefix("  ") || rawLine.hasPrefix("\t")
+            if indented, !bullets.isEmpty {
+                bullets[bullets.count - 1] += " " + line
+                continue
+            }
+            if indented, !numbered.isEmpty {
+                numbered[numbered.count - 1] += " " + line
                 continue
             }
             if line.hasPrefix("- ") || line.hasPrefix("* ") {
@@ -159,7 +170,7 @@ public struct SurfaceMarkdownView: View {
             VStack(alignment: .leading, spacing: 5) {
                 ForEach(Array(items.enumerated()), id: \.offset) { _, item in
                     HStack(alignment: .firstTextBaseline, spacing: 8) {
-                        Text("•")
+                        Text(verbatim: "•")
                         Text(SurfaceMarkdown.inline(item))
                     }
                 }
@@ -168,7 +179,7 @@ public struct SurfaceMarkdownView: View {
             VStack(alignment: .leading, spacing: 5) {
                 ForEach(Array(items.enumerated()), id: \.offset) { index, item in
                     HStack(alignment: .firstTextBaseline, spacing: 8) {
-                        Text("\(index + 1).").monospacedDigit()
+                        Text(verbatim: "\(index + 1).").monospacedDigit()
                         Text(SurfaceMarkdown.inline(item))
                     }
                 }
@@ -227,7 +238,7 @@ public struct SurfaceManualView: View {
             List(shown, selection: $selection) { page in
                 Text(page.title).tag(page.id)
             }
-            .navigationSplitViewColumnWidth(min: 180, ideal: 220, max: 300)
+            .navigationSplitViewColumnWidth(min: 210, ideal: 240, max: 320)
             .searchable(text: $query, placement: .sidebar)
         } detail: {
             if let page = pages.first(where: { $0.id == selection }) {
@@ -268,6 +279,7 @@ public struct SurfaceManualWindow: Scene {
         let title = "\(app.name) Help"
         return Window(title, id: Self.id) {
             SurfaceManualView(app: app, folder: folder)
+                .surfaceNotRestored()
         }
         .defaultSize(width: 880, height: 620)
         .commandsRemoved()

@@ -68,7 +68,7 @@ public struct SurfaceShortcutsView: View {
         }
         .formStyle(.grouped)
         .frame(width: 460)
-        .frame(minHeight: 320, maxHeight: 720)
+        .frame(minHeight: 160, maxHeight: 720)
     }
 }
 
@@ -85,6 +85,7 @@ public struct SurfaceShortcutsWindow: Scene {
     public var body: some Scene {
         Window("Keyboard Shortcuts", id: Self.id) {
             SurfaceShortcutsView(groups: groups)
+                .surfaceNotRestored()
         }
         .windowResizability(.contentSize)
         .commandsRemoved()

@@ -21,6 +21,7 @@ public struct SurfaceAboutWindow: Scene {
         let title = "About \(app.name)"
         return Window(title, id: Self.id) {
             SurfaceAboutView(app: app, help: help, build: build)
+                .surfaceNotRestored()
         }
         .windowResizability(.contentSize)
         .defaultPosition(.center)
@@ -117,8 +118,12 @@ public struct SurfaceAboutView: View {
                     board.setString("\(build.versionLine)\n\(provenance)", forType: .string)
                     copied = true
                 } label: {
-                    HStack(spacing: 5) {
-                        Text(provenance).font(.caption.monospaced())
+                    HStack(alignment: .firstTextBaseline, spacing: 5) {
+                        Text(provenance)
+                            .font(.caption.monospaced())
+                            .multilineTextAlignment(.center)
+                            .lineLimit(3)
+                            .fixedSize(horizontal: false, vertical: true)
                         Image(systemName: copied ? "checkmark" : "doc.on.doc").font(.caption)
                     }
                     .foregroundStyle(.secondary)
