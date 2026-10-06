@@ -26,20 +26,19 @@ recreates the directory. Builds from `main` also bundle a copy at
 repo, [`Casks/bananablitz.rb`](../Casks/bananablitz.rb), runs that copy on
 uninstall so you are not left with locked directories after `brew uninstall`.
 Releases up to v0.0.3 do not include the bundled copy; on those builds use
-**Settings → Preferences → Data → Save Recovery Script…** or this repo's copy.
+**Settings → Data → Save Recovery Script…** or this repo's copy.
 
 ## Regenerating it for your own target list
 
 [`Scripts/unbrick.sh`](../Scripts/unbrick.sh) is **auto-generated** from the
 canonical `PrivacyTarget.allTargets` registry — do not edit it by hand. To
 produce one matching your current configuration, open the app and use
-**Settings → Preferences → Data → Save Recovery Script…**, or call
+**Settings → Data → Save Recovery Script…**, or call
 `UnbrickScriptGenerator.write(to:)` directly.
 
 ## Snapshots
 
-During setup, or later from **Settings → Preferences → Data → Create Local
-Snapshot Now**, BananaBlitz can take an APFS local snapshot via
+During setup, or later from **Settings → Data → Create Local Snapshot**, BananaBlitz can take an APFS local snapshot via
 `tmutil localsnapshot`. That does not need administrator privileges or a
 configured Time Machine destination on modern macOS. The snapshot is taken when
 you ask for it, not automatically before every clean, and it is a Time Machine
@@ -50,5 +49,5 @@ rollback.
 
 macOS protects `~/Library` from sandboxed apps, so BananaBlitz is built without
 the App Sandbox and requires **Full Disk Access**. The onboarding wizard walks
-you through granting it, and the in-app self-test (Settings → Preferences) tells
+you through granting it, and the in-app self-test (Settings → Data) tells
 you which targets are unreachable if it was not granted.

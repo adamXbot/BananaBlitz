@@ -1,6 +1,7 @@
 import SwiftUI
 
-/// Full list of privacy targets organised by cleaning level, with toggles and strategy pickers.
+/// Settings ▸ Targets: every privacy target by cleaning level, with toggles,
+/// strategy pickers and the only in-app Unlock.
 struct TargetListView: View {
     @EnvironmentObject var appState: AppState
 
@@ -8,37 +9,24 @@ struct TargetListView: View {
     @State private var filterLevel: CleaningLevel?
     @State private var unlockError: String?
 
-    var body: some View {
-        VStack(spacing: 0) {
-            // Search and filter bar
-            HStack(spacing: 10) {
-                HStack(spacing: 6) {
-                    Image(systemName: "magnifyingglass")
-                        .font(.system(size: 11))
-                        .foregroundStyle(.tertiary)
-                    TextField("Search targets...", text: $searchText)
-                        .textFieldStyle(.plain)
-                        .font(.system(size: 12))
-                }
-                .padding(6)
-                .background(
-                    RoundedRectangle(cornerRadius: 6)
-                        .fill(Color(.controlBackgroundColor))
-                )
+    /// The list scrolls inside the pane so the window keeps a sane height.
+    private let listHeight: CGFloat = 400
 
-                // Level filter pills
-                HStack(spacing: 4) {
-                    filterPill(nil, label: "All")
-                    ForEach(CleaningLevel.allCases) { level in
-                        filterPill(level, label: level.emoji)
-                    }
+    var body: some View {
+        Section {
+            TextField("Search", text: $searchText, prompt: Text("Name, description or path"))
+                .textFieldStyle(.roundedBorder)
+
+            Picker("Show", selection: $filterLevel) {
+                Text("All levels").tag(CleaningLevel?.none)
+                ForEach(CleaningLevel.allCases) { level in
+                    Text("\(level.emoji) \(level.displayName)").tag(CleaningLevel?.some(level))
                 }
             }
-            .padding()
+            .pickerStyle(.menu)
+        }
 
-            Divider()
-
-            // Target list
+        Section {
             ScrollView {
                 LazyVStack(spacing: 2) {
                     ForEach(CleaningLevel.allCases) { level in
@@ -48,8 +36,9 @@ struct TargetListView: View {
                         }
                     }
                 }
-                .padding(.vertical, 8)
+                .padding(.vertical, 4)
             }
+            .frame(height: listHeight)
         }
         .alert("Couldn't unlock", isPresented: Binding(
             get: { unlockError != nil },
@@ -87,7 +76,7 @@ struct TargetListView: View {
                 }
                 .buttonStyle(.plain)
             }
-            .padding(.horizontal, 16)
+            .padding(.horizontal, 8)
             .padding(.vertical, 8)
 
             // Target rows. Lock state is read from AppState's cache so we
@@ -105,7 +94,6 @@ struct TargetListView: View {
                     onVerify: { verify(target) },
                     onUnlock: { unlock(target) }
                 )
-                .padding(.horizontal, 8)
             }
 
             if level != .paranoid {
@@ -115,36 +103,10 @@ struct TargetListView: View {
         }
     }
 
-    // MARK: - Filter Pill
-
-    private func filterPill(_ level: CleaningLevel?, label: String) -> some View {
-        let isSelected = filterLevel == level
-
-        return Button {
-            withAnimation(.easeInOut(duration: 0.2)) {
-                filterLevel = level
-            }
-        } label: {
-            Text(label)
-                .font(.system(size: 10, weight: isSelected ? .semibold : .regular))
-                .padding(.horizontal, 8)
-                .padding(.vertical, 4)
-                .background(
-                    Capsule()
-                        .fill(isSelected ? Color.accentColor.opacity(0.2) : Color.clear)
-                )
-        }
-        .buttonStyle(.plain)
-        // The pills are emoji-only (🟢/🟡/🔴), so give VoiceOver / colourblind
-        // users a real label and convey selection without relying on colour.
-        .accessibilityLabel(level?.displayName ?? "All levels")
-        .accessibilityAddTraits(isSelected ? .isSelected : [])
-    }
-
     // MARK: - Helpers
 
     private func filteredTargets(for level: CleaningLevel) -> [PrivacyTarget] {
-        // Filter by selected level tab
+        // Filter by selected level
         if let filter = filterLevel, filter != level { return [] }
 
         let targets = PrivacyTarget.allTargets.filter { $0.level == level }

@@ -39,7 +39,7 @@ struct SnapshotStepView: View {
                         .font(.system(size: 20, weight: .bold, design: .rounded))
                 }
                 
-                Text("Creating a Time Machine local snapshot lets you restore individual files via Time Machine if cleaning has unexpected effects. It is not a one-click bootable rollback, and it is taken now rather than before every clean — you can take another later from Settings → Preferences → Data.")
+                Text("Creating a Time Machine local snapshot lets you restore individual files via Time Machine if cleaning has unexpected effects. It is not a one-click bootable rollback, and it is taken now rather than before every clean — you can take another later from Settings → Data.")
                     .font(.system(size: 13))
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)

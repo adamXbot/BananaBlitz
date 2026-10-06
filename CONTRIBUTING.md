@@ -3,7 +3,7 @@
 ## Build requirements
 
 - macOS 14.0 or later (`MACOSX_DEPLOYMENT_TARGET` is 14.0)
-- Xcode 15 or later
+- Xcode 16 or later (the shared surface code uses `openSettings` and `Tab`, which first ship in that SDK)
 - [XcodeGen](https://github.com/yonaskolb/XcodeGen) — `brew install xcodegen`
 
 ## Generating the project
@@ -20,6 +20,19 @@ open BananaBlitz.xcodeproj
 `project.yml` is also the canonical version source: `MARKETING_VERSION` is the
 user-visible semver and `CURRENT_PROJECT_VERSION` is the build number that must
 increase on every notarisation submission.
+
+## Shared surfaces and the manual
+
+`BananaBlitz/Shared/MacSurfaces` is a copy of the shared Settings, About,
+menu, Help and menu bar code used across the portfolio's macOS apps. Never
+edit it in this repository: `just surfaces` copies in the current version when
+the standard's checkout is beside this one, and `xcodegen generate` runs the
+same step, verifying the committed copy against `.project/mac-surfaces.lock.json`
+when it is not. The app's own profile is `BananaBlitz/BananaBlitzSurface.swift`.
+
+The in-app manual is the numbered Markdown pages in [`Manual/`](Manual/),
+bundled as a folder into `Contents/Resources/Manual`. The first heading is the
+page title; `[text](02-page.md)` links between pages.
 
 ## Tests
 
@@ -42,6 +55,7 @@ Current coverage:
 | `DryRunTests.swift` | dry-run copy, including locked and blocked targets |
 | `FileSystemGuardTests.swift` | lock/unlock round-trips |
 | `AppStateTests.swift` | persisted settings, history capping, unreadable-state handling, legacy state decoding |
+| `MenuBarIconStyleTests.swift` | the one-time move of the menu bar icon choice to the shared preference key |
 | `SchedulerServiceTests.swift` | unattended-run downgrading, the cleaning mutex, catch-up only after a missed fire |
 | `SnapshotServiceTests.swift` | parsing `tmutil` output |
 | `UnbrickScriptGeneratorTests.swift` | recovery-script generation |

@@ -47,6 +47,7 @@ public struct SurfaceAboutButton: View {
 }
 
 public struct SurfaceAboutView: View {
+    @Environment(\.openWindow) private var openWindow
     private let app: SurfaceApp
     private let help: SurfaceHelp
     private let build: SurfaceBuild
@@ -78,8 +79,8 @@ public struct SurfaceAboutView: View {
             Divider()
             links
             HStack(spacing: 18) {
-                Button("\(app.name) Help") { help.openManual() }
-                Button("Keyboard Shortcuts") { help.openShortcuts() }
+                Button("\(app.name) Help") { help.manual(openWindow) }
+                Button("Keyboard Shortcuts") { help.shortcuts(openWindow) }
             }
             .buttonStyle(.link)
             footer

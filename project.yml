@@ -20,8 +20,7 @@ settings:
     # Auto-generate Swift symbols for .xcstrings files (when we add them).
     STRING_CATALOG_GENERATE_SYMBOLS: YES
     # Asset-symbol extensions are intentionally NOT generated — flip to YES
-    # if you want type-safe `Image.gitHub` accessors alongside the existing
-    # `Image("GitHub")` calls.
+    # if you want type-safe accessors alongside the existing `Image("…")` calls.
     ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS: NO
 
 packages:
@@ -39,6 +38,11 @@ targets:
           - "Info.plist"
           - "BananaBlitz.entitlements"
       - path: Scripts/unbrick.sh
+        buildPhase: resources
+      # The in-app manual (Help ▸ BananaBlitz Help): a folder of Markdown
+      # pages copied whole into Contents/Resources/Manual.
+      - path: Manual
+        type: folder
         buildPhase: resources
     dependencies:
       - package: Sparkle

@@ -13,9 +13,18 @@ enum NotificationStyle: String, CaseIterable, Codable, Identifiable {
 
     var displayName: String {
         switch self {
-        case .silent:   return "Silent (badge only)"
-        case .summary:  return "Summary notification"
-        case .detailed: return "Detailed notification"
+        case .silent:   return "Silent"
+        case .summary:  return "Summary"
+        case .detailed: return "Detailed"
+        }
+    }
+
+    /// What each choice does, for the ⓘ popover in Settings.
+    var detail: String {
+        switch self {
+        case .silent:   return "Silent shows nothing after a successful automatic clean."
+        case .summary:  return "Summary sends one notification with the number of targets cleaned and the bytes reclaimed."
+        case .detailed: return "Detailed lists each target and its result."
         }
     }
 
@@ -53,27 +62,6 @@ enum ScheduleInterval: Double, CaseIterable, Codable, Identifiable {
     }
 }
 
-/// Which glyph is shown in the macOS menu bar. The colour banana is the
-/// classic brand mark but never adapts to the menu bar's appearance; the
-/// monochrome banana and the SF Symbol render as *template* images, so the
-/// system tints them black-in-light / white-in-dark (and inverts them while
-/// the menu is open) to match the surrounding menu bar.
-enum MenuBarIconStyle: String, CaseIterable, Codable, Identifiable {
-    case banana
-    case bananaMono
-    case sparkles
-
-    var id: String { rawValue }
-
-    var displayName: String {
-        switch self {
-        case .banana:     return "Banana (colour)"
-        case .bananaMono: return "Banana (mono)"
-        case .sparkles:   return "Sparkles"
-        }
-    }
-}
-
 // MARK: - Storage Keys
 
 /// Centralised AppStorage keys to avoid drift on rename.
@@ -83,9 +71,11 @@ enum StorageKey {
     static let selectedLevelRaw       = "selectedLevelRaw"
     static let scheduleIntervalRaw    = "scheduleIntervalRaw"
     static let notificationStyleRaw   = "notificationStyleRaw"
-    static let launchAtLogin          = "launchAtLogin"
     static let isPaused               = "isPaused"
     static let showMenuBarStatus      = "showMenuBarStatus"
+    /// Legacy: builds before the shared surfaces stored the menu bar icon
+    /// here. Read once by `MenuBarIconStyle.migrateLegacyPreference` and
+    /// then removed; the icon now lives under `MenuBarIconStyle.preferenceKey`.
     static let menuBarIconStyleRaw    = "menuBarIconStyleRaw"
     static let enableKeyboardShortcut = "enableKeyboardShortcut"
     static let globalStrategyRaw      = "globalStrategyRaw"
@@ -104,10 +94,8 @@ class AppState: ObservableObject {
     @AppStorage(StorageKey.selectedLevelRaw)       var selectedLevelRaw: String = CleaningLevel.strong.rawValue
     @AppStorage(StorageKey.scheduleIntervalRaw)    var scheduleIntervalRaw: Double = ScheduleInterval.fourHours.rawValue
     @AppStorage(StorageKey.notificationStyleRaw)   var notificationStyleRaw: String = NotificationStyle.summary.rawValue
-    @AppStorage(StorageKey.launchAtLogin)          var launchAtLogin: Bool = false
     @AppStorage(StorageKey.isPaused)               var isPaused: Bool = false
     @AppStorage(StorageKey.showMenuBarStatus)      var showMenuBarStatus: Bool = true
-    @AppStorage(StorageKey.menuBarIconStyleRaw)    var menuBarIconStyleRaw: String = MenuBarIconStyle.bananaMono.rawValue
     @AppStorage(StorageKey.enableKeyboardShortcut) var enableKeyboardShortcut: Bool = false
     @AppStorage(StorageKey.globalStrategyRaw)      var globalStrategyRaw: String = CleaningStrategy.wipeContents.rawValue
 
@@ -162,11 +150,6 @@ class AppState: ObservableObject {
     var notificationStyle: NotificationStyle {
         get { NotificationStyle(rawValue: notificationStyleRaw) ?? .summary }
         set { notificationStyleRaw = newValue.rawValue }
-    }
-
-    var menuBarIconStyle: MenuBarIconStyle {
-        get { MenuBarIconStyle(rawValue: menuBarIconStyleRaw) ?? .bananaMono }
-        set { menuBarIconStyleRaw = newValue.rawValue }
     }
 
     var globalStrategy: CleaningStrategy {

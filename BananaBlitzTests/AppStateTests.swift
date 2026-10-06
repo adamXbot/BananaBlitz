@@ -11,7 +11,6 @@ final class AppStateTests: XCTestCase {
         StorageKey.selectedLevelRaw,
         StorageKey.scheduleIntervalRaw,
         StorageKey.notificationStyleRaw,
-        StorageKey.launchAtLogin,
         StorageKey.isPaused,
         StorageKey.showMenuBarStatus,
         StorageKey.menuBarIconStyleRaw,
@@ -198,27 +197,6 @@ final class AppStateTests: XCTestCase {
         XCTAssertFalse(state.isCurrentlyCleaning)
         XCTAssertTrue(state.beginCleaningIfIdle(), "acquire should succeed again after release")
         state.endCleaning()
-    }
-
-    func test_menuBarIconStyle_defaultsToMonochromeBanana() {
-        let state = makeState()
-        XCTAssertEqual(state.menuBarIconStyle, .bananaMono)
-    }
-
-    func test_menuBarIconStyle_persistsSelection() {
-        let state = makeState()
-        state.menuBarIconStyle = .sparkles
-        XCTAssertEqual(state.menuBarIconStyle, .sparkles)
-        XCTAssertEqual(
-            UserDefaults.standard.string(forKey: StorageKey.menuBarIconStyleRaw),
-            MenuBarIconStyle.sparkles.rawValue
-        )
-    }
-
-    func test_menuBarIconStyle_unknownRawFallsBackToMonochromeBanana() {
-        UserDefaults.standard.set("not-a-real-style", forKey: StorageKey.menuBarIconStyleRaw)
-        let state = makeState()
-        XCTAssertEqual(state.menuBarIconStyle, .bananaMono)
     }
 
     func test_persistence_roundTripsAcrossInstances() {
