@@ -1,12 +1,44 @@
 import SwiftUI
 import AppKit
 
-/// App entry point — menu-bar-only SwiftUI app with no dock icon.
+/// App entry point — a menu bar utility with no Dock icon while idle. The
+/// Settings window, About, the main menu, Help and the popover chrome come
+/// from the shared surface code in `Shared/MacSurfaces`.
 @main
 struct BananaBlitzApp: App {
     @StateObject private var appState = AppState()
     @StateObject private var scheduler = SchedulerService()
-    @StateObject private var updater = UpdaterService()
+    @StateObject private var menuBar = SurfaceMenuBarPreference(defaultIcon: MenuBarIconStyle.default.rawValue)
+    @StateObject private var updates: SurfaceUpdates
+    @Environment(\.openWindow) private var openWindow
+
+    /// Owns Sparkle's controller for the life of the app.
+    private let updater: UpdaterService
+    private let app = SurfaceApp.bananaBlitz
+
+    init() {
+        // Older builds stored the menu bar icon under their own key; move it
+        // before the preference object reads the shared one.
+        MenuBarIconStyle.migrateLegacyPreference()
+        // Dock icon only while a window is open; menu bar only otherwise.
+        SurfaceActivation.shared.start()
+
+        let updater = UpdaterService()
+        self.updater = updater
+        _updates = StateObject(wrappedValue: SurfaceUpdates(
+            driver: updater.updater,
+            releaseNotes: BananaBlitzSurface.releaseNotes
+        ))
+    }
+
+    /// The shared manual and shortcut windows open by default; only the
+    /// welcome needs app code, because the setup wizard is the app's own.
+    private var help: SurfaceHelp {
+        SurfaceHelp(replayWelcome: {
+            NSApplication.shared.activate()
+            openWindow(id: "onboarding")
+        })
+    }
 
     var body: some Scene {
         // Menu bar icon + popover
@@ -14,55 +46,67 @@ struct BananaBlitzApp: App {
             MenuBarView()
                 .environmentObject(appState)
                 .environmentObject(scheduler)
-                .environmentObject(updater)
                 .onAppear(perform: bootstrap)
         } label: {
             // Extracted into its own View so it can host `@Environment(\.openWindow)`
             // and react via `.onAppear` at app launch (the label is rendered as
             // soon as the menu bar item appears).
-            MenuBarLabel(appState: appState)
+            MenuBarLabel(appState: appState, menuBar: menuBar)
         }
         .menuBarExtraStyle(.window)
         .keyboardShortcut(appState.enableKeyboardShortcut ? KeyboardShortcut("b", modifiers: [.command, .control]) : nil)
+        .commands {
+            SurfaceCommands(app: app, help: help, updates: updates)
+            BananaBlitzCommands(appState: appState)
+        }
 
-        // Settings window (opened from menu bar)
-        Window("BananaBlitz Settings", id: "settings") {
-            SettingsView()
+        Settings {
+            SurfaceSettings(app: app, panes: panes)
                 .environmentObject(appState)
                 .environmentObject(scheduler)
-                .environmentObject(updater)
-        }
-        .windowResizability(.contentSize)
-        .defaultPosition(.center)
-        // Adds "Settings…" and "Check for Updates…" to the BananaBlitz
-        // application menu in the macOS menu bar. The menu is only visible
-        // while the app is `.regular` — i.e. while Settings / Onboarding /
-        // About is open. Both actions remain reachable from the menu bar
-        // popover (Settings) and the Settings → Updates section (manual
-        // update check) when no window is open.
-        .commands {
-            AppCommands(updater: updater)
         }
 
-        // Onboarding window. Title bar restored — `.hiddenTitleBar` made the
-        // window hard to identify in the window switcher and impossible to
-        // grab without random-clicking, which compounded the activation-policy
-        // issue described in `AppActivator`.
+        SurfaceAboutWindow(app: app, help: help)
+
+        SurfaceManualWindow(app: app)
+
+        SurfaceShortcutsWindow(groups: [
+            .standard(for: app),
+            SurfaceShortcutGroup("Menu bar item", items: [
+                SurfaceShortcut("⌘⌃B", "Open the menu bar item",
+                                detail: "When the global shortcut is on in Settings ▸ General"),
+                SurfaceShortcut("⌘↩", "Blitz Now", detail: "While the menu bar item is open"),
+            ]),
+        ])
+
+        // Setup wizard. Title bar kept so the window is easy to find in the
+        // window switcher; `Welcome to BananaBlitz` in Help replays it.
         Window("Welcome to BananaBlitz", id: "onboarding") {
             OnboardingContainerView()
                 .environmentObject(appState)
                 .environmentObject(scheduler)
-                .environmentObject(updater)
         }
         .windowResizability(.contentSize)
         .defaultPosition(.center)
+    }
 
-        // About window
-        Window("About BananaBlitz", id: "about") {
-            AboutView()
-        }
-        .windowResizability(.contentSize)
-        .defaultPosition(.center)
+    /// General first, Updates last; five tabs in all.
+    private var panes: [SurfacePane] {
+        [
+            SurfacePane("General", systemImage: "gearshape") {
+                GeneralPane(menuBar: menuBar)
+            },
+            SurfacePane("Targets", systemImage: "target") {
+                TargetListView()
+            },
+            SurfacePane("Schedule", systemImage: "clock") {
+                SchedulePane()
+            },
+            SurfacePane("Data", systemImage: "internaldrive") {
+                DataPane()
+            },
+            .updates(updates),
+        ]
     }
 
     /// Run once when the menu bar item first appears: wire the scheduler
@@ -86,38 +130,28 @@ struct BananaBlitzApp: App {
     }
 }
 
-// MARK: - Application Menu Commands
+// MARK: - File menu
 
-/// Adds "Settings…" and "Check for Updates…" entries to the BananaBlitz
-/// application menu (the macOS top-of-screen menu, the one whose title is
-/// the app name). They appear just under "About BananaBlitz" — the
-/// conventional spot — and are reachable while any user-facing window
-/// is open (which is when the app is `.regular` per AppActivator).
-private struct AppCommands: Commands {
-    @ObservedObject var updater: UpdaterService
-    @Environment(\.openWindow) private var openWindow
+/// The app's own export verbs, in File where the standard puts them. The
+/// app menu and Help come from `SurfaceCommands`.
+private struct BananaBlitzCommands: Commands {
+    @ObservedObject var appState: AppState
 
     var body: some Commands {
-        CommandGroup(after: .appInfo) {
-            Divider()
-
-            Button("Settings…") {
-                openWindow(id: "settings")
-                AppActivator.shared.bringWindowForward(titled: "BananaBlitz Settings")
+        CommandGroup(replacing: .newItem) {
+            Button("Save Recovery Script…") {
+                _ = ExportActions.saveRecoveryScript()
             }
-            .keyboardShortcut(",", modifiers: .command)
-
-            Button("Check for Updates…") {
-                updater.checkForUpdates()
+            Button("Export Cleaning History…") {
+                _ = ExportActions.exportHistory(appState.cleaningHistory)
             }
-            .disabled(!updater.canCheckForUpdates)
         }
     }
 }
 
 // MARK: - MenuBarExtra label
 
-/// The 🍌 + status-icon shown in the menu bar.
+/// The banana + status badge shown in the menu bar.
 ///
 /// Extracted as its own View so it can use `@Environment(\.openWindow)` and
 /// run an `.onAppear` block at app launch — the label is rendered as soon
@@ -126,20 +160,19 @@ private struct AppCommands: Commands {
 /// it, so users don't have to hunt for the menu bar icon on first launch.
 private struct MenuBarLabel: View {
     @ObservedObject var appState: AppState
+    @ObservedObject var menuBar: SurfaceMenuBarPreference
     @Environment(\.openWindow) private var openWindow
-
-    /// Observed directly (rather than via `appState`) so the menu bar glyph
-    /// swaps the instant the Settings picker writes a new value: `@AppStorage`
-    /// inside an `ObservableObject` doesn't reliably republish, but `@AppStorage`
-    /// in a `View` reacts to the underlying `UserDefaults` key changing.
-    @AppStorage(StorageKey.menuBarIconStyleRaw) private var menuBarIconStyleRaw = MenuBarIconStyle.bananaMono.rawValue
 
     /// Guard against re-firing if SwiftUI rebuilds the label.
     @State private var hasAutoOpened = false
 
+    private var style: MenuBarIconStyle {
+        MenuBarIconStyle(rawValue: menuBar.icon) ?? .default
+    }
+
     var body: some View {
         ZStack(alignment: .topTrailing) {
-            MenuBarIconGlyph(style: MenuBarIconStyle(rawValue: menuBarIconStyleRaw) ?? .bananaMono)
+            MenuBarIconGlyph(style: style)
 
             if appState.showMenuBarStatus, let badge = currentBadge {
                 statusBadge(badge)
@@ -158,8 +191,8 @@ private struct MenuBarLabel: View {
             // Defer one runloop tick so the SwiftUI scene graph is fully
             // constructed before we ask it to open another window.
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                NSApplication.shared.activate()
                 openWindow(id: "onboarding")
-                AppActivator.shared.bringWindowForward(titled: "Welcome to BananaBlitz")
             }
         }
     }
@@ -172,7 +205,7 @@ private struct MenuBarLabel: View {
     private var currentBadge: StatusBadge? {
         if !appState.hasCompletedOnboarding {
             return .init(symbol: "exclamationmark", color: .orange,
-                         label: "Onboarding incomplete")
+                         label: "Setup incomplete")
         }
         if appState.isCurrentlyCleaning {
             return .init(symbol: "bolt.fill", color: .blue,
@@ -213,6 +246,8 @@ private struct MenuBarLabel: View {
         }
     }
 
+    /// The glyph changes with state, and its accessibility label says the
+    /// state in words.
     private var accessibilityDescription: String {
         if let badge = currentBadge {
             return "BananaBlitz — \(badge.label)"
@@ -227,58 +262,4 @@ private struct StatusBadge {
     let symbol: String?
     let color: Color
     let label: String
-}
-
-// MARK: - Menu bar icon glyph
-
-/// Renders the user's chosen base menu bar glyph (without the status badge),
-/// shared by the menu bar label and the Settings picker preview so both stay
-/// in sync. The mono banana and the SF Symbol are template images, so the
-/// system tints them to match the menu bar; the colour banana stays yellow.
-struct MenuBarIconGlyph: View {
-    let style: MenuBarIconStyle
-
-    var body: some View {
-        switch style {
-        case .banana:
-            Text("🍌")
-        case .bananaMono:
-            Image(nsImage: Self.monoBananaTemplate)
-        case .sparkles:
-            Image(systemName: "sparkles")
-        }
-    }
-
-    /// A monochrome banana drawn as a hollow (outline) *template* `NSImage`, so
-    /// a status item tints it black-in-light / white-in-dark and inverts it
-    /// while the menu is open — exactly how an SF Symbol behaves — with no asset
-    /// to ship. Built once and reused; status items copy it as needed.
-    static let monoBananaTemplate: NSImage = {
-        let side: CGFloat = 18
-        let image = NSImage(size: NSSize(width: side, height: side), flipped: true) { _ in
-            // Authored in a 24×24 design space (origin top-left), sized to fill
-            // the box with a small margin so the outline reads at menu-bar size,
-            // then scaled to the image. The two on-curve points near (20,20)
-            // form the rounded lower tip; the path closes at the upper tip.
-            let s = side / 24.0
-            func p(_ x: CGFloat, _ y: CGFloat) -> NSPoint { NSPoint(x: x * s, y: y * s) }
-
-            let banana = NSBezierPath()
-            banana.move(to: p(4.5, 2.9))
-            banana.curve(to: p(20.4, 20.0), controlPoint1: p(3.5, 13.5), controlPoint2: p(10.6, 20.8))
-            banana.curve(to: p(19.1, 18.2), controlPoint1: p(20.6, 19.1), controlPoint2: p(20.2, 18.4))
-            banana.curve(to: p(6.6, 3.9),   controlPoint1: p(11.4, 16.6), controlPoint2: p(6.5, 10.9))
-            banana.curve(to: p(4.5, 2.9),   controlPoint1: p(6.5, 2.9),   controlPoint2: p(5.4, 2.2))
-            banana.close()
-
-            banana.lineWidth = 1.6
-            banana.lineJoinStyle = .round
-            banana.lineCapStyle = .round
-            NSColor.black.setStroke()
-            banana.stroke()
-            return true
-        }
-        image.isTemplate = true
-        return image
-    }()
 }

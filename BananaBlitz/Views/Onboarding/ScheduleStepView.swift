@@ -5,9 +5,6 @@ struct ScheduleStepView: View {
     @EnvironmentObject var appState: AppState
     @EnvironmentObject var scheduler: SchedulerService
 
-    @State private var loginItemState: LoginItemService.State = .disabled
-    @State private var loginItemError: String?
-
     var body: some View {
         VStack(spacing: 24) {
             Spacer()
@@ -62,37 +59,15 @@ struct ScheduleStepView: View {
                         .fill(Color(.controlBackgroundColor).opacity(0.5))
                 )
 
-                // Launch at Login. The toggle reflects whatever the user
-                // chooses — we never silently flip it on for them — and it
-                // only moves once macOS has actually accepted the change.
+                // Launch at login. The shared row reports what macOS actually
+                // has (enabled, waiting for approval, unavailable) rather than
+                // a stored flag, and never silently flips it on.
                 VStack(alignment: .leading, spacing: 6) {
-                    Toggle(isOn: Binding(
-                        get: { appState.launchAtLogin },
-                        set: { newValue in setLaunchAtLogin(newValue) }
-                    )) {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("Launch at Login")
-                                .font(.system(size: 12, weight: .semibold))
-                            Text("Recommended to keep your system clean automatically.")
-                                .font(.system(size: 10))
-                                .foregroundStyle(.secondary)
-                        }
-                    }
-                    .toggleStyle(.switch)
-
-                    if let loginItemError {
-                        Text(loginItemError)
-                            .font(.system(size: 10))
-                            .foregroundStyle(.red)
-                    } else if loginItemState == .requiresApproval {
-                        HStack(spacing: 6) {
-                            Text("Needs your approval in System Settings → General → Login Items.")
-                                .font(.system(size: 10))
-                                .foregroundStyle(.orange)
-                            Button("Open") { LoginItemService.openSystemSettings() }
-                                .controlSize(.small)
-                        }
-                    }
+                    Text("Recommended to keep your system clean automatically.")
+                        .font(.system(size: 10))
+                        .foregroundStyle(.secondary)
+                    SurfaceLaunchAtLoginRow(app: .bananaBlitz)
+                        .toggleStyle(.switch)
                 }
                 .padding(16)
                 .frame(maxWidth: 320)
@@ -105,20 +80,5 @@ struct ScheduleStepView: View {
             Spacer()
         }
         .padding(24)
-        .onAppear { loginItemState = LoginItemService.state }
-    }
-
-    /// Only flips the stored preference once macOS has accepted the change;
-    /// on failure the toggle stays where it was and the reason is shown.
-    private func setLaunchAtLogin(_ enabled: Bool) {
-        do {
-            try LoginItemService.setEnabled(enabled)
-            appState.launchAtLogin = enabled
-            loginItemError = nil
-        } catch {
-            loginItemError = "Could not \(enabled ? "enable" : "disable") Launch at Login: \(error.localizedDescription)"
-            AppLog.loginItem.error("Failed to update login item: \(error.localizedDescription, privacy: .public)")
-        }
-        loginItemState = LoginItemService.state
     }
 }

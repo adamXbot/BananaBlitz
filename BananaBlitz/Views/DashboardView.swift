@@ -1,70 +1,72 @@
 import SwiftUI
 
-/// Dashboard showing an overview of recent cleaning activity and stats.
+/// The dashboard, shown in the menu bar popover: three stat tiles, a banner
+/// when the last clean had failures, and the recent activity list.
 struct DashboardView: View {
     @EnvironmentObject var appState: AppState
 
+    /// Rows shown before the list scrolls.
+    private let visibleHistory = 30
+
     var body: some View {
-        VStack(spacing: 20) {
+        VStack(spacing: 10) {
             recentFailureBanner
 
-            // Hero stat cards
-            HStack(spacing: 16) {
-                statCard(
-                    title: "Total Reclaimed (All Time)",
+            // Stat tiles
+            HStack(spacing: 8) {
+                statTile(
+                    title: "Reclaimed",
                     value: appState.totalBytesReclaimed.formattedBytes,
                     icon: "arrow.down.circle.fill",
-                    color: .green
+                    color: .green,
+                    accessibility: "Total reclaimed, all time"
                 )
 
-                statCard(
-                    title: "Targets Enabled",
-                    value: "\(appState.enabledTargetIDs.count) / \(PrivacyTarget.allTargets.count)",
+                statTile(
+                    title: "Targets",
+                    value: "\(appState.enabledTargetIDs.count)/\(PrivacyTarget.allTargets.count)",
                     icon: "target",
-                    color: .blue
+                    color: .blue,
+                    accessibility: "Targets enabled"
                 )
 
-                statCard(
-                    title: "Last Clean",
+                statTile(
+                    title: "Last clean",
                     value: lastCleanString,
                     icon: "clock.fill",
-                    color: .orange
+                    color: .orange,
+                    accessibility: "Last clean"
                 )
             }
 
             // Recent history
-            VStack(alignment: .leading, spacing: 12) {
-                Text("Recent Activity")
-                    .font(.headline)
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Recent activity")
+                    .font(.system(size: 11, weight: .semibold))
 
                 if appState.cleaningHistory.isEmpty {
                     HStack {
                         Spacer()
-                        VStack(spacing: 8) {
-                            Image(systemName: "sparkles")
-                                .font(.largeTitle)
-                                .foregroundStyle(.secondary)
-                            Text("No cleaning history yet")
-                                .font(.subheadline)
-                                .foregroundStyle(.secondary)
-                        }
-                        .padding(.vertical, 30)
+                        Text("No cleaning history yet")
+                            .font(.system(size: 10))
+                            .foregroundStyle(.secondary)
                         Spacer()
                     }
+                    .padding(.vertical, 10)
                 } else {
                     ScrollView {
-                        LazyVStack(spacing: 4) {
-                            ForEach(appState.cleaningHistory.prefix(30)) { result in
+                        LazyVStack(spacing: 2) {
+                            ForEach(appState.cleaningHistory.prefix(visibleHistory)) { result in
                                 historyRow(result)
                             }
                         }
                     }
-                    .frame(maxHeight: 250)
+                    .frame(maxHeight: 150)
                 }
             }
-            .padding()
+            .padding(10)
             .background(
-                RoundedRectangle(cornerRadius: 12)
+                RoundedRectangle(cornerRadius: 10)
                     .fill(Color(.controlBackgroundColor).opacity(0.5))
             )
         }
@@ -72,40 +74,44 @@ struct DashboardView: View {
 
     // MARK: - Components
 
-    private func statCard(title: String, value: String, icon: String, color: Color) -> some View {
-        VStack(spacing: 8) {
+    private func statTile(title: String, value: String, icon: String, color: Color, accessibility: String) -> some View {
+        VStack(spacing: 4) {
             Image(systemName: icon)
-                .font(.system(size: 24))
+                .font(.system(size: 14))
                 .foregroundStyle(color)
 
             Text(value)
-                .font(.system(size: 18, weight: .bold, design: .rounded))
+                .font(.system(size: 12, weight: .bold, design: .rounded))
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
 
             Text(title)
-                .font(.caption)
+                .font(.system(size: 9))
                 .foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, 16)
+        .padding(.vertical, 10)
         .background(
-            RoundedRectangle(cornerRadius: 12)
+            RoundedRectangle(cornerRadius: 10)
                 .fill(Color(.controlBackgroundColor).opacity(0.5))
                 .overlay(
-                    RoundedRectangle(cornerRadius: 12)
+                    RoundedRectangle(cornerRadius: 10)
                         .strokeBorder(color.opacity(0.2), lineWidth: 1)
                 )
         )
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("\(accessibility): \(value)")
     }
 
     private func historyRow(_ result: CleaningResult) -> some View {
-        HStack(spacing: 8) {
+        HStack(spacing: 6) {
             Image(systemName: result.success ? "checkmark.circle.fill" : "xmark.circle.fill")
-                .font(.system(size: 12))
+                .font(.system(size: 10))
                 .foregroundStyle(result.success ? .green : .red)
 
             VStack(alignment: .leading, spacing: 1) {
                 Text(result.targetName)
-                    .font(.system(size: 11, weight: .medium))
+                    .font(.system(size: 10, weight: .medium))
                     .lineLimit(1)
 
                 // Why a target failed, or why a success touched nothing. Both
@@ -124,16 +130,15 @@ struct DashboardView: View {
 
             if result.bytesReclaimed > 0 {
                 Text(result.bytesReclaimed.formattedBytes)
-                    .font(.system(size: 10, design: .monospaced))
+                    .font(.system(size: 9, design: .monospaced))
                     .foregroundStyle(.secondary)
             }
 
             Text(result.timestamp, style: .relative)
-                .font(.system(size: 10))
+                .font(.system(size: 9))
                 .foregroundStyle(.tertiary)
         }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 6)
+        .padding(.vertical, 2)
     }
 
     // MARK: - Helpers
@@ -151,21 +156,21 @@ struct DashboardView: View {
     private var recentFailureBanner: some View {
         let recent = recentRunFailures()
         if !recent.isEmpty {
-            HStack(alignment: .top, spacing: 10) {
+            HStack(alignment: .top, spacing: 8) {
                 Image(systemName: "exclamationmark.triangle.fill")
                     .foregroundStyle(.orange)
-                    .font(.system(size: 14))
+                    .font(.system(size: 12))
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Last clean had \(recent.count) failure\(recent.count == 1 ? "" : "s")")
-                        .font(.system(size: 12, weight: .semibold))
+                        .font(.system(size: 11, weight: .semibold))
                     Text(failureLines(recent))
-                        .font(.system(size: 11))
+                        .font(.system(size: 10))
                         .foregroundStyle(.secondary)
                         .lineLimit(4)
                 }
                 Spacer()
             }
-            .padding(12)
+            .padding(10)
             .background(
                 RoundedRectangle(cornerRadius: 10)
                     .fill(Color.orange.opacity(0.1))

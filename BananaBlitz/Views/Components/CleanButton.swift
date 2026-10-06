@@ -6,6 +6,8 @@ struct CleanButton: View {
     let icon: String
     var isLoading: Bool = false
     var style: CleanButtonStyle = .primary
+    /// Optional key equivalent; the popover's primary action takes ⌘↩.
+    var shortcut: KeyboardShortcut? = nil
     let action: () -> Void
 
     enum CleanButtonStyle {
@@ -65,6 +67,7 @@ struct CleanButton: View {
             .animation(.easeOut(duration: 0.12), value: isPressed)
         }
         .buttonStyle(.plain)
+        .keyboardShortcut(shortcut)
         // Drive isPressed off a zero-distance drag so the bounce + scale
         // animations fire on press / release.
         .simultaneousGesture(

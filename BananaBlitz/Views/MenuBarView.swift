@@ -1,6 +1,7 @@
 import SwiftUI
 
-/// The main menu bar popover view shown when clicking the menu bar icon.
+/// The menu bar popover: the shared header, the app's status, Blitz Now,
+/// the dashboard, a per-level summary, then the shared footer.
 struct MenuBarView: View {
     @EnvironmentObject var appState: AppState
     @EnvironmentObject var scheduler: SchedulerService
@@ -10,32 +11,43 @@ struct MenuBarView: View {
     @State private var isPreparingCleanPreview = false
     @State private var cleanOutcome: CleanOutcome?
 
+    private let app = SurfaceApp.bananaBlitz
+
     var body: some View {
         VStack(spacing: 0) {
-            // Header
-            headerSection
+            SurfacePopoverHeader(app: app, mark: BananaBlitzSurface.popoverMark)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 12)
 
             Divider().opacity(0.3)
 
             if !appState.hasCompletedOnboarding {
                 onboardingPrompt
             } else {
-                // Quick stats
-                statsSection
+                statusSection
 
                 // Blitz Now button
                 actionSection
 
                 Divider().opacity(0.3)
 
-                // Target summary by level
-                targetSummarySection
+                // Dashboard: stats, failures and recent activity
+                DashboardView()
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 10)
 
                 Divider().opacity(0.3)
 
-                // Footer
-                footerSection
+                // Target summary by level
+                targetSummarySection
             }
+
+            Divider().opacity(0.3)
+
+            // The app has no main window, so the footer is the gear and Quit.
+            SurfacePopoverFooter(app: app)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 10)
         }
         .frame(width: 320)
         .background(Color(.windowBackgroundColor))
@@ -65,28 +77,13 @@ struct MenuBarView: View {
         }
     }
 
-    // MARK: - Header
+    // MARK: - Status
 
-    private var headerSection: some View {
-        HStack {
-            Text("🍌")
-                .font(.title2)
-            Text("BananaBlitz")
-                .font(.system(size: 15, weight: .bold, design: .rounded))
-
-            Spacer()
-
-            // Status dot
+    private var statusSection: some View {
+        HStack(alignment: .top) {
             StatusDot(color: statusColor)
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
-    }
+                .padding(.top, 4)
 
-    // MARK: - Stats
-
-    private var statsSection: some View {
-        HStack {
             VStack(alignment: .leading, spacing: 3) {
                 Text(appState.statusSummary)
                     .font(.system(size: 11))
@@ -105,41 +102,11 @@ struct MenuBarView: View {
 
             Spacer()
 
-            VStack(alignment: .trailing, spacing: 2) {
-                Text(appState.totalBytesReclaimed.formattedBytes)
-                    .font(.system(size: 16, weight: .bold, design: .rounded))
-                Text("total reclaimed (all time)")
-                    .font(.system(size: 9))
-                    .foregroundStyle(.tertiary)
-            }
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 10)
-    }
-
-    // MARK: - Action
-
-    private var actionSection: some View {
-        VStack(spacing: 8) {
-            CleanButton(
-                title: cleanButtonTitle,
-                icon: "bolt.fill",
-                isLoading: appState.isCurrentlyCleaning || isPreparingCleanPreview
-            ) {
-                prepareManualClean()
-            }
-
-            if let outcome = cleanOutcome, !appState.isCurrentlyCleaning {
-                cleanOutcomeRow(outcome)
-            }
-
             // Schedule toggle
-            HStack {
+            VStack(alignment: .trailing, spacing: 3) {
                 Text(appState.scheduleInterval.displayName)
                     .font(.system(size: 10))
                     .foregroundStyle(.secondary)
-
-                Spacer()
 
                 Button {
                     appState.isPaused.toggle()
@@ -154,6 +121,28 @@ struct MenuBarView: View {
                     .foregroundStyle(appState.isPaused ? .orange : .secondary)
                 }
                 .buttonStyle(.plain)
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 10)
+    }
+
+    // MARK: - Action
+
+    private var actionSection: some View {
+        VStack(spacing: 8) {
+            // The primary action in the popover takes ⌘↩.
+            CleanButton(
+                title: cleanButtonTitle,
+                icon: "bolt.fill",
+                isLoading: appState.isCurrentlyCleaning || isPreparingCleanPreview,
+                shortcut: .defaultAction
+            ) {
+                prepareManualClean()
+            }
+
+            if let outcome = cleanOutcome, !appState.isCurrentlyCleaning {
+                cleanOutcomeRow(outcome)
             }
         }
         .padding(.horizontal, 16)
@@ -197,49 +186,6 @@ struct MenuBarView: View {
         .padding(.vertical, 4)
     }
 
-    // MARK: - Footer
-
-    private var footerSection: some View {
-        HStack(spacing: 12) {
-            Button {
-                openWindow(id: "settings")
-                AppActivator.shared.bringWindowForward(titled: "BananaBlitz Settings")
-            } label: {
-                HStack(spacing: 4) {
-                    Image(systemName: "gear")
-                        .font(.system(size: 11))
-                    Text("Settings")
-                        .font(.system(size: 11))
-                }
-            }
-            .buttonStyle(.plain)
-            .foregroundStyle(.secondary)
-
-            Button {
-                openWindow(id: "about")
-                AppActivator.shared.bringWindowForward(titled: "About BananaBlitz")
-            } label: {
-                Text("About")
-                    .font(.system(size: 11))
-            }
-            .buttonStyle(.plain)
-            .foregroundStyle(.secondary)
-
-            Spacer()
-
-            Button {
-                NSApplication.shared.terminate(nil)
-            } label: {
-                Text("Quit")
-                    .font(.system(size: 11))
-            }
-            .buttonStyle(.plain)
-            .foregroundStyle(.secondary)
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 10)
-    }
-
     // MARK: - Onboarding Prompt
 
     private var onboardingPrompt: some View {
@@ -249,9 +195,9 @@ struct MenuBarView: View {
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
 
-            CleanButton(title: "Get Started", icon: "arrow.right") {
+            CleanButton(title: "Get Started", icon: "arrow.right", shortcut: .defaultAction) {
+                NSApplication.shared.activate()
                 openWindow(id: "onboarding")
-                AppActivator.shared.bringWindowForward(titled: "Welcome to BananaBlitz")
             }
         }
         .padding(20)
@@ -274,13 +220,13 @@ struct MenuBarView: View {
     }
 
     private var cleanButtonTitle: String {
-        if appState.isCurrentlyCleaning { return "Cleaning..." }
-        if isPreparingCleanPreview { return "Previewing..." }
+        if appState.isCurrentlyCleaning { return "Cleaning…" }
+        if isPreparingCleanPreview { return "Previewing…" }
         return "🍌 Blitz Now"
     }
 
-    /// Inline result of the last manual blitz, so failures aren't invisible
-    /// from the menu bar (the Dashboard banner is otherwise the only signal).
+    /// Inline result of the last manual blitz. Failures are also listed in
+    /// the dashboard banner directly below.
     @ViewBuilder
     private func cleanOutcomeRow(_ outcome: CleanOutcome) -> some View {
         HStack(spacing: 6) {
@@ -293,20 +239,12 @@ struct MenuBarView: View {
                      + (outcome.skipped > 0 ? " · \(outcome.skipped) locked, skipped" : ""))
                     .font(.system(size: 10))
                     .foregroundStyle(.secondary)
-                Spacer()
             } else {
                 Text("\(outcome.succeeded) cleaned · \(outcome.failed) failed")
                     .font(.system(size: 10, weight: .medium))
                     .foregroundStyle(.orange)
-                Spacer()
-                Button("Details") {
-                    openWindow(id: "settings")
-                    AppActivator.shared.bringWindowForward(titled: "BananaBlitz Settings")
-                }
-                .buttonStyle(.plain)
-                .font(.system(size: 10, weight: .semibold))
-                .foregroundStyle(.blue)
             }
+            Spacer()
         }
         .transition(.opacity)
     }
