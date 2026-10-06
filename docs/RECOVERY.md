@@ -22,9 +22,10 @@ the empty directory so the system daemon can use the path again.
 
 It removes the immutable flag from every locked path, deletes the lock file, and
 recreates the directory. Builds from `main` also bundle a copy at
-`BananaBlitz.app/Contents/Resources/unbrick.sh`, and the canonical cask in this
-repo, [`Casks/bananablitz.rb`](../Casks/bananablitz.rb), runs that copy on
-uninstall so you are not left with locked directories after `brew uninstall`.
+`BananaBlitz.app/Contents/Resources/unbrick.sh`, and the cask template in this
+repo, [`packaging/homebrew/bananablitz.rb`](../packaging/homebrew/bananablitz.rb),
+runs that copy on uninstall so you are not left with locked directories after
+`brew uninstall`.
 Releases up to v0.0.3 do not include the bundled copy; on those builds use
 **Settings → Preferences → Data → Save Recovery Script…** or this repo's copy.
 
