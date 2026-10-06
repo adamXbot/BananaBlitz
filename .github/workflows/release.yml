@@ -1,137 +1,74 @@
 name: Release
 
-# Triggered by pushing a tag matching `v<semver>` (e.g. v1.1.0). The
-# tag name becomes the release version; MARKETING_VERSION in Config/Shared.xcconfig
-# must match before the workflow will publish.
+# Thin caller — the actual pipeline (test gate → sign → notarize → DMG →
+# appcast → GitHub Release → Homebrew cask PR) lives in
+# privacykey/gh-workflows (.github/workflows/macos-sparkle-release.yml),
+# pinned to an exact commit like every other consumer. This repo owns
+# only Scripts/release.sh, the version in Config/Shared.xcconfig and the
+# cask template in packaging/homebrew/. See docs/RELEASES.md for the
+# secret layout and the release-script contract.
 #
-# Outputs:
-#   • Signed + notarized DMG attached to the GitHub Release.
-#   • Updated appcast.xml committed to the gh-pages branch so Sparkle
-#     clients pick up the new version on their next check.
-#
-# Required GitHub Actions secrets:
-#   APPLE_DEVELOPER_ID_CERT     — base64 .p12 of the Developer ID
-#                                 Application cert + private key.
-#   APPLE_DEVELOPER_ID_PASSWORD — passphrase for the .p12 above.
-#   APPLE_NOTARY_USER           — Apple ID for `notarytool`.
-#   APPLE_NOTARY_PASSWORD       — app-specific password for that ID.
-#   APPLE_NOTARY_TEAM_ID        — Apple Developer team ID.
-#   SPARKLE_PRIVATE_KEY         — base64 EdDSA private key from
-#                                 Sparkle's generate_keys.
+# Secret scopes (names only; values live in GitHub):
+#   • APPLE_* — repository secrets for this account's macOS apps.
+#   • SPARKLE_PRIVATE_KEY — this repo (intended home: the macos-signing
+#     environment). Environment secrets only resolve inside the called
+#     workflow's release job — which declares `environment:
+#     macos-signing` — so this caller MUST use `secrets: inherit`;
+#     an explicit `secrets:` mapping resolves in the caller's context
+#     (no environment) and would come back empty.
+#   • HOMEBREW_TAP_TOKEN — optional; the cask-PR step skips cleanly
+#     until it exists.
 
 on:
   push:
     tags:
       - 'v*'
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: 'Tag to release as (e.g. v1.0.1). Must match MARKETING_VERSION in Config/Shared.xcconfig.'
+        required: true
 
+# Deliberate duplication of the called workflow's concurrency block:
+# GitHub evaluates workflow-level concurrency of a *called* workflow
+# inconsistently, so both sides declare it.
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+# A called workflow can only reduce the caller's token permissions,
+# never raise them — contents: write is needed to publish the Release
+# and push the appcast branch; checks: read lets the publication gates
+# confirm the required CI checks at the tagged commit. Inside the
+# reusable workflow the test job runs with contents: read; only its
+# release job uses write.
 permissions:
-  contents: read
   checks: read
+  contents: write
 
 jobs:
-  build:
-    runs-on: macos-15
-
-    permissions:
-      contents: write
-      checks: read
-
-    steps:
-      - name: Check out source
-        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
-        with:
-          fetch-depth: 0
-
-      - name: Select Xcode
-        uses: maxim-lobanov/setup-xcode@ed7a3b1fda3918c0306d1b724322adc0b8cc0a90 # v1
-        with:
-          xcode-version: latest-stable
-
-      - name: Install xcodegen
-        run: brew install xcodegen
-
-      - name: Generate Xcode project
-        run: xcodegen generate
-
-      - name: Verify tag matches MARKETING_VERSION
-        run: |
-          TAG_VERSION="${GITHUB_REF#refs/tags/v}"
-          PROJECT_VERSION=$(sed -nE 's/^MARKETING_VERSION[[:space:]]*=[[:space:]]*([0-9.]+).*/\1/p' Config/Shared.xcconfig | head -1)
-          if [[ "$TAG_VERSION" != "$PROJECT_VERSION" ]]; then
-            echo "::error ::tag $TAG_VERSION does not match MARKETING_VERSION $PROJECT_VERSION in Config/Shared.xcconfig"
-            exit 1
-          fi
-          echo "MARKETING_VERSION=$PROJECT_VERSION" >> "$GITHUB_ENV"
-
-      - name: Set up keychain + Developer ID cert
-        env:
-          CERT_BASE64: ${{ secrets.APPLE_DEVELOPER_ID_CERT }}
-          CERT_PASSWORD: ${{ secrets.APPLE_DEVELOPER_ID_PASSWORD }}
-        run: |
-          KEYCHAIN_PATH="$RUNNER_TEMP/build.keychain"
-          KEYCHAIN_PASSWORD="$(uuidgen)"
-          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
-          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
-          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
-          echo -n "$CERT_BASE64" | base64 --decode > "$RUNNER_TEMP/cert.p12"
-          security import "$RUNNER_TEMP/cert.p12" \
-            -P "$CERT_PASSWORD" \
-            -A -t cert -f pkcs12 -k "$KEYCHAIN_PATH"
-          keychains=("$KEYCHAIN_PATH")
-          while IFS= read -r keychain; do
-            [[ -z "$keychain" ]] || keychains+=("$keychain")
-          done < <(security list-keychains -d user | sed -E 's/^[[:space:]]*"//; s/"[[:space:]]*$//')
-          security list-keychains -d user -s "${keychains[@]}"
-          rm "$RUNNER_TEMP/cert.p12"
-
-      - name: Build, sign, and notarize DMG
-        env:
-          APPLE_NOTARY_USER:     ${{ secrets.APPLE_NOTARY_USER }}
-          APPLE_NOTARY_PASSWORD: ${{ secrets.APPLE_NOTARY_PASSWORD }}
-          APPLE_NOTARY_TEAM_ID:  ${{ secrets.APPLE_NOTARY_TEAM_ID }}
-          GH_TOKEN: ${{ github.token }}
-        run: ./Scripts/release.sh
-
-      - name: Install Sparkle CLI tools
-        run: brew install --cask sparkle
-
-      - name: Generate appcast
-        env:
-          SPARKLE_PRIVATE_KEY: ${{ secrets.SPARKLE_PRIVATE_KEY }}
-        run: ./Scripts/generate-appcast.sh ./dist
-
-      - name: Verify publication package before uploading
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          for dmg in dist/*.dmg; do
-            python3 .project/projectctl.py artifact-verify "$dmg" --channel release
-          done
-
-      - name: Attach DMG to GitHub Release
-        uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3
-        with:
-          files: dist/*.dmg
-          generate_release_notes: true
-          fail_on_unmatched_files: true
-
-      - name: Publish appcast to gh-pages
-        run: |
-          # Publish appcast.xml to the gh-pages branch so Sparkle
-          # clients can fetch it without a release-page round-trip.
-          # We use a worktree so the existing checkout is undisturbed.
-          git config user.name  "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git fetch origin gh-pages || true
-          git worktree add ../gh-pages-checkout gh-pages 2>/dev/null \
-            || git worktree add -b gh-pages ../gh-pages-checkout origin/gh-pages \
-            || git worktree add -b gh-pages ../gh-pages-checkout
-          cp dist/appcast.xml ../gh-pages-checkout/appcast.xml
-          (cd ../gh-pages-checkout && \
-            git add appcast.xml && \
-            git commit -m "Release ${GITHUB_REF#refs/tags/}" && \
-            git push origin gh-pages)
-
-      - name: Cleanup keychain
-        if: always()
-        run: security delete-keychain "$RUNNER_TEMP/build.keychain" || true
+  release:
+    uses: privacykey/gh-workflows/.github/workflows/macos-sparkle-release.yml@17c26982bea3999cc60fbc18ac094b164319b9cd # Source provenance and project publication gates
+    with:
+      xcodeproj: BananaBlitz.xcodeproj
+      scheme: BananaBlitz
+      # The .xcodeproj is generated from project.yml; the committed copy
+      # must match the generator's output or the clean-source gate fails.
+      uses_xcodegen: true
+      # The shared default is ./scripts/release.sh; this repo keeps its
+      # scripts under Scripts/.
+      release_script: ./Scripts/release.sh
+      appcast_branch: gh-pages
+      # Attach the dSYM to the public Release so anyone with a crash
+      # log can symbolicate; the reusable default (false) would keep
+      # symbols private-only.
+      publish_dsym: true
+      # Renders packaging/homebrew/bananablitz.rb and opens a PR against
+      # adamxbot/homebrew-tap. Skips cleanly until the HOMEBREW_TAP_TOKEN
+      # secret exists.
+      cask_name: bananablitz
+      tap_repo: adamxbot/homebrew-tap
+      # Empty on tag pushes (the reusable workflow falls back to the
+      # triggering ref name); set by workflow_dispatch re-releases.
+      release_tag: ${{ inputs.release_tag || '' }}
+    secrets: inherit

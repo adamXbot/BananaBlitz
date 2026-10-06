@@ -1,7 +1,10 @@
 name: CI
 
-# Tests-only. Release builds (signing, notarization, DMG, appcast) live
-# in release.yml and are triggered by `v*` tag pushes.
+# Thin caller for the shared push/PR pipeline (unsigned build + tests,
+# zero secrets), pinned to the same exact commit as release.yml. Test
+# output ships as an uploaded xcresult bundle. Release builds live in
+# release.yml, triggered by `v*` tag pushes. The command contract and
+# build-identity checks have their own workflows.
 
 on:
   push:
@@ -9,55 +12,21 @@ on:
   pull_request:
     branches: [main]
 
+# A new push to the same ref/PR cancels an in-flight run. Declared here
+# as well as in the called workflow — GitHub evaluates workflow-level
+# concurrency of a *called* workflow inconsistently.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ci-${{ github.head_ref || github.ref }}
   cancel-in-progress: true
 
+permissions:
+  checks: read
+  contents: read
+
 jobs:
-  build-and-test:
-    name: Build & Test
-    runs-on: macos-15
-    timeout-minutes: 20
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
-
-        with:
-          fetch-depth: 0
-      - name: Select Xcode
-        uses: maxim-lobanov/setup-xcode@ed7a3b1fda3918c0306d1b724322adc0b8cc0a90 # v1
-        with:
-          xcode-version: latest-stable
-
-      - name: Show toolchain versions
-        run: |
-          xcodebuild -version
-          swift --version
-
-      - name: Install xcodegen
-        run: brew install xcodegen
-
-      - name: Generate Xcode project
-        run: xcodegen generate
-
-      - name: Build & test
-        run: |
-          set -o pipefail
-          xcodebuild test \
-            -scheme BananaBlitz \
-            -destination 'platform=macOS' \
-            -configuration Debug \
-            -resultBundlePath TestResults.xcresult \
-            CODE_SIGN_IDENTITY="-" \
-            CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGNING_ALLOWED=NO \
-            | xcpretty || (xcodebuild -showdestinations -scheme BananaBlitz; exit 1)
-
-      - name: Upload test results
-        if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
-        with:
-          name: test-results
-          path: TestResults.xcresult
-          retention-days: 7
+  ci:
+    uses: privacykey/gh-workflows/.github/workflows/macos-app-ci.yml@17c26982bea3999cc60fbc18ac094b164319b9cd # Source provenance and project publication gates
+    with:
+      xcodeproj: BananaBlitz.xcodeproj
+      scheme: BananaBlitz
+      uses_xcodegen: true

@@ -12,7 +12,7 @@ Tag detection requires fetched tag refs. App build workflows and the updated sha
 
 Identification is consistent; clean-tree release enforcement is not universal. Do not infer a universal clean/tagged publishing gate from the presence of metadata.
 
-CI runs unsigned macOS tests. A v* tag starts signing/notarization, DMG packaging, GitHub Release and appcast publishing. The workflow checks tag versus marketing version. release-local has no clean-tree or tag gate.
+CI runs unsigned macOS tests through the shared `macos-app-ci.yml` workflow. A v* tag starts the shared `macos-sparkle-release.yml` pipeline, pinned to the same exact commit: signing/notarization, DMG packaging, GitHub Release, appcast publishing and the Homebrew cask PR. The pipeline checks tag versus marketing version; `Scripts/release.sh` runs the clean-tree, annotated-tag and required-CI gates before compiling and verifies the archive, app and DMG against the release channel. `release-local` runs the same gates. See [RELEASES.md](RELEASES.md).
 
 ## Available commands
 

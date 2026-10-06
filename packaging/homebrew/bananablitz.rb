@@ -1,22 +1,20 @@
-# BananaBlitz Homebrew Cask
-#
-# Canonical source. Copy this file into adamxbot/homebrew-tap on every
-# release so end users on `brew install adamxbot/tap/bananablitz` get
-# the new version. Per-release updates: bump `version` and `sha256`
-# below, then sync.
-#
-# To compute sha256:
-#   shasum -a 256 dist/BananaBlitz-X.Y.Z.dmg
-
 cask "bananablitz" do
-  version "0.0.0"
-  sha256 "0000000000000000000000000000000000000000000000000000000000000000"
+  # TEMPLATE — rendered by the shared release workflow
+  # (privacykey/gh-workflows macos-sparkle-release.yml): @@VERSION@@,
+  # @@SHA256@@ and @@URL@@ are substituted per release and the result is
+  # pushed to a release branch in adamxbot/homebrew-tap as
+  # Casks/bananablitz.rb, with a pull request to merge. Do not hand-edit
+  # version/sha256/url here; everything else passes through verbatim.
+  version "@@VERSION@@"
+  sha256 "@@SHA256@@"
 
-  url "https://github.com/adamxbot/BananaBlitz/releases/download/v#{version}/BananaBlitz-#{version}.dmg"
+  url "@@URL@@"
   name "BananaBlitz"
   desc "Periodically clean macOS telemetry caches in ~/Library"
   homepage "https://github.com/adamxbot/BananaBlitz"
 
+  # The Sparkle feed is not live yet (SUFeedURL is unset), so track the
+  # GitHub Release instead of the appcast.
   livecheck do
     url :url
     strategy :github_latest

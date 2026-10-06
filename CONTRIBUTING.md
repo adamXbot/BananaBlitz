@@ -17,9 +17,11 @@ xcodegen generate
 open BananaBlitz.xcodeproj
 ```
 
-`project.yml` is also the canonical version source: `MARKETING_VERSION` is the
-user-visible semver and `CURRENT_PROJECT_VERSION` is the build number that must
-increase on every notarisation submission.
+[`Config/Shared.xcconfig`](Config/Shared.xcconfig) is the canonical version
+source: `MARKETING_VERSION` is the user-visible semver, changed with
+`just version VERSION NOTES_FILE`. The build number is a UTC stamp captured at
+build time and is never hand-edited; see
+[`docs/BUILD-PROVENANCE.md`](docs/BUILD-PROVENANCE.md).
 
 ## Tests
 
@@ -31,8 +33,9 @@ xcodebuild test -scheme BananaBlitz -destination 'platform=macOS' -configuration
 ```
 
 That is the same command [`.github/workflows/ci.yml`](.github/workflows/ci.yml)
-runs on every push and pull request against `main`; the workflow additionally
-uploads the `.xcresult` bundle as an artifact.
+runs on every push and pull request against `main`, through the shared
+`macos-app-ci.yml` workflow in privacykey/gh-workflows; it additionally uploads
+the `.xcresult` bundle as an artifact.
 
 Current coverage:
 
@@ -56,18 +59,18 @@ A [`justfile`](justfile) wraps the common commands. `just --list` prints them:
 | `just test` | the unsigned Debug test command above |
 | `just release <version>` | tags `v<version>` and pushes it, triggering the release workflow |
 | `just release-local` | `./Scripts/release.sh` (needs Developer ID and notary credentials) |
-| `just clean` | removes `dist/` and `TestResults.xcresult` |
+| `just clean` | removes the declared reproducible outputs under `.project/output/` |
 
 ## Bundled scripts
 
 All live in `Scripts/`:
 
-- `release.sh` — the full release pipeline: archive → sign → notarise → DMG →
-  notarise DMG → staple. Driven by
-  [`.github/workflows/release.yml`](.github/workflows/release.yml); runs locally
-  too with the right environment variables.
-- `generate-appcast.sh` — wraps Sparkle's `generate_appcast` to produce a signed
-  feed for the `gh-pages` branch.
+- `release.sh` — the build half of a release: archive → sign → notarise → DMG →
+  notarise DMG → staple, plus the dSYM zip. The shared release pipeline calls it
+  through [`.github/workflows/release.yml`](.github/workflows/release.yml); it
+  runs locally too as `just release-local`.
+- `generate-appcast.sh` — wraps Sparkle's `generate_appcast` for local appcast
+  experiments. CI generates and signs the published feed itself.
 - `unbrick.sh` — reverses every Lock-with-Immutable-File operation. Auto-generated
   from `PrivacyTarget.allTargets`; do not edit it by hand.
 - `regenerate-app-icons.sh` — resizes a single source PNG into every slot in
@@ -75,7 +78,9 @@ All live in `Scripts/`:
 
 ## Dependencies
 
-Sparkle is the only package dependency, pinned in `project.yml` from 2.6.0.
+Sparkle is the only package dependency, declared in `project.yml` from 2.10.0 and
+resolved in the committed `Package.resolved`. Regenerate the project and
+re-resolve after a bump so the tracked files match what CI generates.
 Renovate keeps it and the Actions workflows current via the shared
 `privacykey/renovate-config` preset ([`renovate.json`](renovate.json)).
 
