@@ -4,7 +4,7 @@ BananaBlitz ships through two channels that share the same DMG:
 
 1. **Direct download.** A Developer ID signed and notarised DMG attached to
    a GitHub Release. Sparkle inside the running app polls
-   [`https://adamxbot.github.io/BananaBlitz/appcast.xml`][appcast] and
+   [`https://adamxweb.com/bananablitz/appcast.xml`][appcast] and
    offers the update to anyone who installed via that DMG, once `SUFeedURL`
    and `SUPublicEDKey` are set in `Info.plist` (they are not yet; see
    [Turning Sparkle on](#turning-sparkle-on)).
@@ -15,7 +15,7 @@ BananaBlitz ships through two channels that share the same DMG:
    `brew upgrade --cask bananablitz` see the new version. The in-app
    updater detects a Caskroom install at runtime and steps out of the way.
 
-[appcast]: https://adamxbot.github.io/BananaBlitz/appcast.xml
+[appcast]: https://adamxweb.com/bananablitz/appcast.xml
 [tap]:     https://github.com/adamxbot/homebrew-tap
 [cask]:    ../packaging/homebrew/bananablitz.rb
 
@@ -59,7 +59,10 @@ the DMG's package record once more, attaches the DMG, the sidecar and the
 dSYM zip to the GitHub Release (with auto-generated notes), pushes
 `appcast.xml` to the `gh-pages` branch, and opens the cask PR in the tap
 when `HOMEBREW_TAP_TOKEN` is configured. Without that token the cask step
-skips and everything else still publishes.
+skips and everything else still publishes. The adamxweb.com Worker serves
+the `gh-pages` copy at the feed URL, so the appcast is live on
+[adamxweb.com/bananablitz/appcast.xml][appcast] within a few minutes of the
+push, without GitHub Pages.
 
 To re-run a release for a tag that already exists, use Actions → Release →
 *Run workflow* and set `release_tag`. The pipeline checks out that tag and
@@ -155,8 +158,13 @@ git push origin gh-pages
 git checkout main
 ```
 
-In Settings → Pages, enable Pages on the `gh-pages` branch root. The feed
-will live at `https://adamxbot.github.io/BananaBlitz/appcast.xml`.
+GitHub Pages does not need to be enabled. The feed URL is
+`https://adamxweb.com/bananablitz/appcast.xml`: the adamxweb.com Worker
+fetches `https://raw.githubusercontent.com/adamXbot/BananaBlitz/gh-pages/appcast.xml`
+and serves it from there (the `appcast` field of the BananaBlitz page in the
+adamxweb.com site repository), so the URL baked into shipped apps stays on
+that domain whatever hosts the file later. Until the branch exists the feed
+URL answers 404, which Sparkle treats as a failed check.
 
 ### 4. The Homebrew tap
 
@@ -175,7 +183,7 @@ In-app updates are dormant until `Info.plist` carries both keys:
 
 ```xml
 <key>SUFeedURL</key>
-<string>https://adamxbot.github.io/BananaBlitz/appcast.xml</string>
+<string>https://adamxweb.com/bananablitz/appcast.xml</string>
 <key>SUPublicEDKey</key>
 <string>…public key from generate_keys…</string>
 ```

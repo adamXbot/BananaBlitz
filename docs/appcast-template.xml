@@ -14,7 +14,7 @@
      xmlns:dc="http://purl.org/dc/elements/1.1/">
   <channel>
     <title>BananaBlitz</title>
-    <link>https://adamxbot.github.io/BananaBlitz/appcast.xml</link>
+    <link>https://adamxweb.com/bananablitz/appcast.xml</link>
     <description>Update feed for BananaBlitz — stable channel.</description>
     <language>en</language>
   </channel>
