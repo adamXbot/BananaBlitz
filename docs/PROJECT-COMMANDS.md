@@ -75,6 +75,7 @@ the captured identity. Credentials remain in the configured local/CI stores.
 - `dev` — Start an interactive development loop
 - `generate` — Regenerate derived project files
 - `gen` — gen
+- `surfaces` — Copy the shared Settings, menu and About code into this app
 - `release` — Create and trigger a versioned release
 - `release-local` — Keep the combined local release builder
 
