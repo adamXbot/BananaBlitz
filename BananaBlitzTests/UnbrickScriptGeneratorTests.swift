@@ -31,6 +31,18 @@ final class UnbrickScriptGeneratorTests: XCTestCase {
                       "specific-file target should be in FILE_TARGETS section")
     }
 
+    /// `Scripts/unbrick.sh` is committed and bundled into the app (and run
+    /// by the Homebrew cask on uninstall), so it must match the generator.
+    func test_bundledScript_matchesGenerator() throws {
+        let scriptURL = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .appendingPathComponent("Scripts/unbrick.sh")
+        let bundled = try String(contentsOf: scriptURL, encoding: .utf8)
+        XCTAssertEqual(bundled, UnbrickScriptGenerator.script(),
+                       "Scripts/unbrick.sh is stale; regenerate it with UnbrickScriptGenerator.write(to:)")
+    }
+
     func test_write_producesExecutableFile() throws {
         let url = URL(fileURLWithPath: NSTemporaryDirectory())
             .appendingPathComponent("unbrick-\(UUID().uuidString).sh")

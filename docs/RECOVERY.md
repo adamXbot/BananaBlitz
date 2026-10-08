@@ -25,7 +25,13 @@ recreates the directory. Builds from `main` also bundle a copy at
 `BananaBlitz.app/Contents/Resources/unbrick.sh`, and the cask template in this
 repo, [`packaging/homebrew/bananablitz.rb`](../packaging/homebrew/bananablitz.rb),
 runs that copy on uninstall so you are not left with locked directories after
-`brew uninstall`.
+`brew uninstall`. Homebrew runs the same hook on `brew reinstall` and on an
+upgrade (`brew upgrade --greedy`, since the cask declares `auto_updates`), so
+re-apply *Lock with Immutable File* in the app afterwards; scheduled runs only
+re-lock if **Settings → Schedule → Allow locking on schedule** is on.
+When you add or move a target, also update `writable_paths` in that template:
+Homebrew sandboxes the hook and only lets it write to the paths listed there
+(`HomebrewCaskTests` fails until they match `PrivacyTarget.allTargets`).
 Releases up to v0.0.3 do not include the bundled copy; on those builds use
 **Settings → Data → Save Recovery Script…** or this repo's copy.
 

@@ -51,6 +51,7 @@
 		8475AEA70053F01D57AD70B1 /* ScanStepView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 41C90FC61468F40C68CA9B8D /* ScanStepView.swift */; };
 		8AFADD756194AB33002AE1A5 /* PrivacyTarget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A43F0620A5A81B210F3B2EC /* PrivacyTarget.swift */; };
 		8BBD54D6D00563F5CE3712BE /* SurfaceRows.swift in Sources */ = {isa = PBXBuildFile; fileRef = 145B5A1D634B471A7A9E4DDE /* SurfaceRows.swift */; };
+		90A47A20656874989AD675A5 /* HomebrewCaskTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B9DBCA593556C1CB58B3D88 /* HomebrewCaskTests.swift */; };
 		90F6D3E9B01DF7A43FCAF7AA /* UnbrickScriptGenerator.swift in Sources */ = {isa = PBXBuildFile; fileRef = B3C42AA47D05B968800F9675 /* UnbrickScriptGenerator.swift */; };
 		9574331089D533063EB88EC5 /* CleanButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 31514E94FD6C8886E0E7F85B /* CleanButton.swift */; };
 		A94D8459B7078B5CCB35A63A /* SurfaceBuild.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2D5604BF06D640ED423FB7F7 /* SurfaceBuild.swift */; };
@@ -115,6 +116,7 @@
 		41FC0A55800955F7B5FF3A7F /* CleaningStrategy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CleaningStrategy.swift; sourceTree = "<group>"; };
 		456891667A5EE743FF96C5C8 /* SurfaceMenuBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SurfaceMenuBar.swift; sourceTree = "<group>"; };
 		475B47537280016C908A59F3 /* TargetRowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TargetRowView.swift; sourceTree = "<group>"; };
+		4B9DBCA593556C1CB58B3D88 /* HomebrewCaskTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomebrewCaskTests.swift; sourceTree = "<group>"; };
 		4CC8312C1CEC9774672948C1 /* SurfaceActivation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SurfaceActivation.swift; sourceTree = "<group>"; };
 		4FD9ECED711067918E8D41FD /* PermissionStepView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PermissionStepView.swift; sourceTree = "<group>"; };
 		5050A83BE6DA68DF23FD3CCA /* SurfaceSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SurfaceSettings.swift; sourceTree = "<group>"; };
@@ -207,6 +209,7 @@
 				EE988712DF2081D894F99E2A /* AppStateTests.swift */,
 				3141B508FBA6DB813DA14377 /* DryRunTests.swift */,
 				3FE179BD151ECD3BF532C3B5 /* FileSystemGuardTests.swift */,
+				4B9DBCA593556C1CB58B3D88 /* HomebrewCaskTests.swift */,
 				CC539399BD93EAB398E6FCF4 /* MenuBarIconStyleTests.swift */,
 				AABC9C525043D8F999B1518D /* PrivacyCleanerTests.swift */,
 				9CA97C8CD2DBFBC78B4A9012 /* SchedulerServiceTests.swift */,
@@ -515,6 +518,7 @@
 				FFE271DA645F37088E4F7808 /* AppStateTests.swift in Sources */,
 				52704FA96B6EDA0C85F4359C /* DryRunTests.swift in Sources */,
 				526DA7136FED0AF158D2FB92 /* FileSystemGuardTests.swift in Sources */,
+				90A47A20656874989AD675A5 /* HomebrewCaskTests.swift in Sources */,
 				AB1B2BFD1AF5EE2E67FD4E8D /* MenuBarIconStyleTests.swift in Sources */,
 				AE1EC0B13F276380DFB421FD /* PrivacyCleanerTests.swift in Sources */,
 				26BFBE961394BC57D7F802A7 /* SchedulerServiceTests.swift in Sources */,
