@@ -61,8 +61,19 @@ for target in "${DIR_TARGETS[@]}"; do
     fi
 done
 
+# True when $1 carries the user-immutable flag set by `chflags uchg`.
+# BSD stat by full path: a GNU stat earlier on PATH reads -f differently.
+is_user_immutable() {
+    case ",$(/usr/bin/stat -f %Sf "$1" 2>/dev/null)," in
+        *,uchg,*) return 0 ;;
+        *) return 1 ;;
+    esac
+}
+
+# A file target is the real file rather than a stand-in, so leave it alone
+# unless it is locked.
 for target in "${FILE_TARGETS[@]}"; do
-    if [ -e "$target" ]; then
+    if [ -e "$target" ] && is_user_immutable "$target"; then
         echo "Unlocking and removing file: $target"
         CHANGED=1
         chflags nouchg "$target" 2>/dev/null || EXIT_CODE=1

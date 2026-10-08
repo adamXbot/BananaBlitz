@@ -75,6 +75,18 @@ final class UnbrickScriptGeneratorTests: XCTestCase {
                       "file loop must set CHANGED=1")
     }
 
+    /// A file target is the user's real file rather than a stand-in, so the
+    /// script must only remove it when it carries the user-immutable flag.
+    func test_script_fileLoopOnlyActsOnImmutableFiles() {
+        let script = UnbrickScriptGenerator.script()
+        let guarded = """
+            for target in "${FILE_TARGETS[@]}"; do
+                if [ -e "$target" ] && is_user_immutable "$target"; then
+            """
+        XCTAssertTrue(script.contains(guarded), "file loop must check for uchg before removing anything")
+        XCTAssertTrue(script.contains("*,uchg,*) return 0 ;;"), "is_user_immutable must match the uchg flag")
+    }
+
     // MARK: - Running the script
 
     func test_runningScript_withNothingLocked_doesNotRestartUIServices() throws {
@@ -91,11 +103,8 @@ final class UnbrickScriptGeneratorTests: XCTestCase {
         let relativePath = String(target.path.dropFirst(2))   // drop "~/"
 
         let run = try runScript { home in
-            // A directory target collapsed to a file is what the script unlocks.
-            let lock = home.appendingPathComponent(relativePath)
-            try FileManager.default.createDirectory(at: lock.deletingLastPathComponent(),
-                                                    withIntermediateDirectories: true)
-            try Data().write(to: lock)
+            // A directory target collapsed to a locked file is what the app leaves behind.
+            try Self.makeFile(at: home.appendingPathComponent(relativePath), immutable: true)
         }
 
         XCTAssertEqual(run.status, 0, run.output)
@@ -107,6 +116,36 @@ final class UnbrickScriptGeneratorTests: XCTestCase {
         let restored = run.home.appendingPathComponent(relativePath).path
         XCTAssertTrue(FileManager.default.fileExists(atPath: restored, isDirectory: &isDir) && isDir.boolValue,
                       "\(restored) should be a directory again")
+    }
+
+    func test_runningScript_leavesUnlockedFileTargetAlone() throws {
+        let target = try XCTUnwrap(PrivacyTarget.allTargets.first { $0.isSpecificFile })
+        let relativePath = String(target.path.dropFirst(2))   // drop "~/"
+
+        let run = try runScript { home in
+            try Self.makeFile(at: home.appendingPathComponent(relativePath), immutable: false)
+        }
+
+        XCTAssertEqual(run.status, 0, run.output)
+        XCTAssertEqual(run.killallCalls, [], run.output)
+        XCTAssertTrue(run.output.contains("No locked targets found."), run.output)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: run.home.appendingPathComponent(relativePath).path),
+                      "an unlocked \(target.path) must not be deleted")
+    }
+
+    func test_runningScript_removesLockedFileTarget() throws {
+        let target = try XCTUnwrap(PrivacyTarget.allTargets.first { $0.isSpecificFile })
+        let relativePath = String(target.path.dropFirst(2))   // drop "~/"
+
+        let run = try runScript { home in
+            try Self.makeFile(at: home.appendingPathComponent(relativePath), immutable: true)
+        }
+
+        XCTAssertEqual(run.status, 0, run.output)
+        XCTAssertEqual(run.killallCalls, ["ControlCenter SystemUIServer Dock"], run.output)
+        XCTAssertTrue(run.output.contains("Unlocking and removing file"), run.output)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: run.home.appendingPathComponent(relativePath).path),
+                       "a locked \(target.path) should be removed")
     }
 
     func test_write_producesExecutableFile() throws {
@@ -143,7 +182,14 @@ final class UnbrickScriptGeneratorTests: XCTestCase {
         let bin = root.appendingPathComponent("bin")
         try fm.createDirectory(at: home, withIntermediateDirectories: true)
         try fm.createDirectory(at: bin, withIntermediateDirectories: true)
-        addTeardownBlock { try? FileManager.default.removeItem(at: root) }
+        addTeardownBlock {
+            // Clear any uchg flag the script didn't get to, or the tree can't be removed.
+            let items = FileManager.default.enumerator(at: root, includingPropertiesForKeys: nil)
+            while let item = items?.nextObject() as? URL {
+                try? FileManager.default.setAttributes([.immutable: false], ofItemAtPath: item.path)
+            }
+            try? FileManager.default.removeItem(at: root)
+        }
 
         let log = root.appendingPathComponent("killall.log")
         let stub = bin.appendingPathComponent("killall")
@@ -176,5 +222,15 @@ final class UnbrickScriptGeneratorTests: XCTestCase {
                          output: String(decoding: output, as: UTF8.self),
                          killallCalls: calls,
                          home: home)
+    }
+
+    /// Create an empty file at `url`, optionally with the user-immutable (`uchg`) flag.
+    private static func makeFile(at url: URL, immutable: Bool) throws {
+        let fm = FileManager.default
+        try fm.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try Data().write(to: url)
+        if immutable {
+            try fm.setAttributes([.immutable: true], ofItemAtPath: url.path)
+        }
     }
 }
