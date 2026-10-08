@@ -61,7 +61,8 @@ Current coverage:
 | `MenuBarIconStyleTests.swift` | the one-time move of the menu bar icon choice to the shared preference key |
 | `SchedulerServiceTests.swift` | unattended-run downgrading, the cleaning mutex, catch-up only after a missed fire |
 | `SnapshotServiceTests.swift` | parsing `tmutil` output |
-| `UnbrickScriptGeneratorTests.swift` | recovery-script generation |
+| `UnbrickScriptGeneratorTests.swift` | recovery-script generation, and that the committed `Scripts/unbrick.sh` is current |
+| `HomebrewCaskTests.swift` | the cask template's sandbox `writable_paths` covering every target |
 
 ## just recipes
 
