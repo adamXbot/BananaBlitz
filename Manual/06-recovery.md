@@ -14,7 +14,7 @@ Open Settings ▸ Targets, expand a row that shows the lock icon and click **Unl
 bash ~/Downloads/unbrick.sh
 ```
 
-For every target it removes the immutable flag, deletes the lock file and recreates the directory, then restarts the menu bar services so the system picks the paths up again. A copy also ships inside the app at `BananaBlitz.app/Contents/Resources/unbrick.sh`, and the Homebrew cask runs it on uninstall.
+For every locked target it removes the immutable flag, deletes the lock file and recreates the directory. A single-file target is removed only when it carries the immutable flag. If it unlocked anything, it then restarts the menu bar services so the system picks the paths up again; otherwise it prints "No locked targets found." and leaves them running. A copy also ships inside the app at `BananaBlitz.app/Contents/Resources/unbrick.sh`, and the Homebrew cask runs it on uninstall.
 
 ## Local snapshots
 
