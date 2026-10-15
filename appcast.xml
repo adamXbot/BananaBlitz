@@ -1,0 +1,21 @@
+<?xml version="1.0" standalone="yes"?>
+<!--
+  Bootstrap appcast for the gh-pages branch. After the first release
+  runs through `.github/workflows/release.yml`, this file is replaced
+  by Sparkle's generate_appcast output containing real `<item>`
+  entries, signatures, and asset URLs.
+
+  Until then, Sparkle clients will see an empty channel and report
+  "you're on the latest version" — which is correct for v0.0.0
+  installs as well.
+-->
+<rss version="2.0"
+     xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle"
+     xmlns:dc="http://purl.org/dc/elements/1.1/">
+  <channel>
+    <title>BananaBlitz</title>
+    <link>https://adamxbot.github.io/BananaBlitz/appcast.xml</link>
+    <description>Update feed for BananaBlitz — stable channel.</description>
+    <language>en</language>
+  </channel>
+</rss>
