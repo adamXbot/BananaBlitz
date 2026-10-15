@@ -2,8 +2,8 @@ import Foundation
 
 /// "What would happen if I clicked Blitz Now?" — non-destructive preview.
 /// Walks every job, asks the filesystem what it would touch, and reports.
-struct DryRunReport: Identifiable {
-    let id = UUID()
+struct DryRunReport: Identifiable, Codable, Hashable {
+    var id = UUID()
     let target: PrivacyTarget
     let strategy: CleaningStrategy
     let bytesAtRisk: Int64
@@ -13,6 +13,15 @@ struct DryRunReport: Identifiable {
     var summary: String {
         "\(target.name) — \(action) (\(itemsAtRisk) item\(itemsAtRisk == 1 ? "" : "s"), \(bytesAtRisk.formattedBytes))"
     }
+}
+
+/// Payload for `.sheet(item:)` and for the Confirm Blitz window. Presenting
+/// the data and the surface as one value sidesteps a macOS SwiftUI race in
+/// which `.sheet(isPresented:)` builds its content before a separately-stored
+/// `@State` array has propagated, so the sheet opened with an empty list.
+struct DryRunPresentation: Identifiable, Codable, Hashable {
+    var id = UUID()
+    let reports: [DryRunReport]
 }
 
 enum DryRun {

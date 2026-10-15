@@ -38,6 +38,11 @@ page title; `[text](02-page.md)` links between pages.
 
 ## Tests
 
+Two test targets live beside the app: the unit tests in `BananaBlitzTests/`
+and the end-to-end UI suite in `BananaBlitzUITests/`.
+
+### Unit tests
+
 The unit-test target lives in `BananaBlitzTests/`. After `xcodegen generate`:
 
 ```sh
@@ -64,6 +69,53 @@ Current coverage:
 | `UnbrickScriptGeneratorTests.swift` | recovery-script generation, and that the committed `Scripts/unbrick.sh` is current |
 | `HomebrewCaskTests.swift` | the cask template's sandbox `writable_paths` covering every target |
 
+### End-to-end UI tests
+
+`just ui-test` (or `just ui-test MenuBarUITests` for one class) runs
+`BananaBlitzUITests` through its own scheme, `BananaBlitz UI Tests`, and
+exports every screenshot to `ui-screenshots/`. XCUITest drives the real app:
+the menu bar item, the setup wizard, Settings, the dry-run and self-test
+sheets, the save panels, and an actual clean including the destructive lock
+strategy and its Unlock.
+
+Every test launches the app with `--ui-testing` and `CFFIXED_USER_HOME`
+pointing at a fresh `bananablitz-uitest-*` directory under `$TMPDIR`
+(`Support/SandboxHome.swift`). Every `~/Library` path the app scans, cleans or
+locks resolves inside that directory, preferences go to a dedicated
+`com.bananablitz.uitests` suite that is wiped at launch, Sparkle stays dormant,
+and the app refuses to start in UI-testing mode unless its home really is a
+sandbox (`BananaBlitz/Support/LaunchConfiguration.swift`). Nothing in your own
+`~/Library` or your real BananaBlitz preferences is read or written.
+
+Fixtures are plain directories and files created at the registry paths, so a
+clean has something to remove and the suite can assert exact byte counts. The
+Full Disk Access check is satisfied by creating `Library/Biome` in the sandbox.
+Tests never create a Time Machine snapshot or register a login item; those two
+remain manual checks on a signed build.
+
+| File | What it exercises |
+|---|---|
+| `PreflightUITests.swift` | run first and alone in CI: fails with a clear message if a system dialog is covering the screen |
+| `OnboardingUITests.swift` | auto-open on first launch, all seven steps, Back, the no-access path with Skip, the first blitz cleaning fixtures, accepting the default level enables its targets, resume after quit, Get Started from the popover |
+| `MenuBarUITests.swift` | popover summary and dashboard, pause/resume, confirm-then-clean, cancel touches nothing, a cancelled confirmation stays cancelled on reopen, reopening never re-arms the schedule, Settings and Quit |
+| `SettingsUITests.swift` | the five panes, About's version and build number, schedule interval and pause, default level, Full Disk Access status, preference persistence across relaunch, dry-run preview mirrors the unattended downgrade, self-test, rescan, Reset All Settings |
+| `TargetsUITests.swift` | search, level filter, per-target toggles and section toggles with persistence, row details and strategy picker, lock → confirm → unlock round trip |
+| `DataExportUITests.swift` | Save Recovery Script and Export History through the real save panel |
+| `VisualReviewUITests.swift` | screenshots of every surface in light and dark appearance |
+
+The suite needs an ad-hoc signed runner (macOS kills an unsigned XCUITest
+runner, so `CODE_SIGNING_ALLOWED=NO` must not be passed) and a logged-in GUI
+session it has to itself: any system alert that appears mid-run steals clicks
+and fails whichever test is running. The shared `ci.yml` keeps running only
+the `BananaBlitz` scheme; [`ui-tests.yml`](.github/workflows/ui-tests.yml)
+runs the preflight and then the suite on a macOS runner.
+
+Controls are located by the identifiers in `BananaBlitz/Support/AccessibilityID.swift`,
+which is compiled into both the app and the UI test bundle. Shared surface
+controls (the Settings tabs, About, Launch at login, Reset) carry no
+identifiers and are found by their labels instead; never edit
+`Shared/MacSurfaces` to add one.
+
 ## just recipes
 
 A [`justfile`](justfile) wraps the common commands. `just --list` prints them:
@@ -72,6 +124,7 @@ A [`justfile`](justfile) wraps the common commands. `just --list` prints them:
 |---|---|
 | `just setup` | `xcodegen generate` |
 | `just test` | the unsigned Debug test command above |
+| `just ui-test [Class[/test]]` | the end-to-end UI suite, ad-hoc signed, screenshots to `ui-screenshots/` |
 | `just release <version>` | tags `v<version>` and pushes it, triggering the release workflow |
 | `just release-local` | `./Scripts/release.sh` (needs Developer ID and notary credentials) |
 | `just clean` | removes the declared reproducible outputs under `.project/output/` |

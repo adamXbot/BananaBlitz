@@ -10,7 +10,7 @@ struct OnboardingContainerView: View {
     /// Full Disk Access in System Settings, which often requires a relaunch)
     /// drops the user back on the same step. Cleared on completion and on
     /// `AppState.resetAll()`.
-    @AppStorage(StorageKey.onboardingStep) private var currentStep: Int = 0
+    @AppStorage(StorageKey.onboardingStep, store: LaunchConfiguration.defaults) private var currentStep: Int = 0
 
     @State private var scanResults: [String: Int64] = [:]
     @State private var isScanning = false
@@ -96,6 +96,7 @@ struct OnboardingContainerView: View {
                 }
                 .buttonStyle(.plain)
                 .foregroundStyle(.secondary)
+                .accessibilityIdentifier(AccessibilityID.Onboarding.back)
             }
 
             Spacer()
@@ -104,6 +105,7 @@ struct OnboardingContainerView: View {
             Text("Step \(currentStep + 1) of \(totalSteps)")
                 .font(.system(size: 10))
                 .foregroundStyle(.tertiary)
+                .accessibilityIdentifier(AccessibilityID.Onboarding.stepIndicator)
 
             Spacer()
 
@@ -118,6 +120,7 @@ struct OnboardingContainerView: View {
                 .font(.system(size: 11))
                 .foregroundStyle(.secondary)
                 .padding(.trailing, 4)
+                .accessibilityIdentifier(AccessibilityID.Onboarding.skipPermission)
             }
 
             if currentStep < totalSteps - 1 {
@@ -143,6 +146,7 @@ struct OnboardingContainerView: View {
                 .buttonStyle(.plain)
                 .keyboardShortcut(.defaultAction)
                 .disabled(!canProceed)
+                .accessibilityIdentifier(AccessibilityID.Onboarding.next)
             } else {
                 Button {
                     finishOnboarding()
@@ -162,6 +166,10 @@ struct OnboardingContainerView: View {
                     .foregroundStyle(.white)
                 }
                 .buttonStyle(.plain)
+                // Finishing mid-clean would close the window and hide the
+                // first-run results before the user has seen them.
+                .disabled(appState.isCurrentlyCleaning)
+                .accessibilityIdentifier(AccessibilityID.Onboarding.finish)
             }
         }
         .padding(.horizontal, 20)

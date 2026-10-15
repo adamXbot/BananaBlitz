@@ -1,4 +1,5 @@
 import SwiftUI
+import AppKit
 
 /// The menu bar popover: the shared header, the app's status, Blitz Now,
 /// the dashboard, a per-level summary, then the shared footer.
@@ -6,10 +7,7 @@ struct MenuBarView: View {
     @EnvironmentObject var appState: AppState
     @EnvironmentObject var scheduler: SchedulerService
     @Environment(\.openWindow) private var openWindow
-    @State private var pendingCleanReports: [DryRunReport] = []
-    @State private var cleanConfirmationPresented = false
     @State private var isPreparingCleanPreview = false
-    @State private var cleanOutcome: CleanOutcome?
 
     private let app = SurfaceApp.bananaBlitz
 
@@ -51,35 +49,20 @@ struct MenuBarView: View {
         }
         .frame(width: 320)
         .background(Color(.windowBackgroundColor))
-        .sheet(isPresented: $cleanConfirmationPresented) {
-            DryRunSheet(
-                reports: pendingCleanReports,
-                title: "Confirm Blitz",
-                confirmTitle: "Blitz Now",
-                confirmRole: .destructive,
-                onClose: { cleanConfirmationPresented = false },
-                onConfirm: {
-                    cleanConfirmationPresented = false
-                    scheduler.performManualClean { results in
-                        // Empty means the run was skipped (another clean in
-                        // flight); don't overwrite the last real outcome.
-                        guard !results.isEmpty else { return }
-                        let succeeded = results.filter(\.success).count
-                        cleanOutcome = CleanOutcome(
-                            succeeded: succeeded,
-                            failed: results.count - succeeded,
-                            skipped: results.filter { $0.note != nil }.count,
-                            bytes: results.reduce(Int64(0)) { $0 + $1.bytesReclaimed }
-                        )
-                    }
-                }
-            )
-        }
     }
 
     // MARK: - Status
 
+    /// Re-evaluated once a minute while the popover is open and every time it
+    /// opens, so "Cleaned 5 min ago" and the countdown never go stale: the
+    /// popover's view tree survives between opens and nothing else publishes.
     private var statusSection: some View {
+        TimelineView(.periodic(from: .now, by: 60)) { _ in
+            statusContent
+        }
+    }
+
+    private var statusContent: some View {
         HStack(alignment: .top) {
             StatusDot(color: statusColor)
                 .padding(.top, 4)
@@ -88,6 +71,7 @@ struct MenuBarView: View {
                 Text(appState.statusSummary)
                     .font(.system(size: 11))
                     .foregroundStyle(.secondary)
+                    .accessibilityIdentifier(AccessibilityID.MenuBar.status)
 
                 if scheduler.isActive, let timeLeft = scheduler.timeUntilNextClean {
                     HStack(spacing: 4) {
@@ -97,6 +81,8 @@ struct MenuBarView: View {
                             .font(.system(size: 10))
                     }
                     .foregroundStyle(.tertiary)
+                    .accessibilityElement(children: .combine)
+                    .accessibilityIdentifier(AccessibilityID.MenuBar.nextClean)
                 }
             }
 
@@ -107,6 +93,7 @@ struct MenuBarView: View {
                 Text(appState.scheduleInterval.displayName)
                     .font(.system(size: 10))
                     .foregroundStyle(.secondary)
+                    .accessibilityIdentifier(AccessibilityID.MenuBar.scheduleLabel)
 
                 Button {
                     appState.isPaused.toggle()
@@ -121,6 +108,7 @@ struct MenuBarView: View {
                     .foregroundStyle(appState.isPaused ? .orange : .secondary)
                 }
                 .buttonStyle(.plain)
+                .accessibilityIdentifier(AccessibilityID.MenuBar.pauseResume)
             }
         }
         .padding(.horizontal, 16)
@@ -140,8 +128,9 @@ struct MenuBarView: View {
             ) {
                 prepareManualClean()
             }
+            .accessibilityIdentifier(AccessibilityID.MenuBar.blitzNow)
 
-            if let outcome = cleanOutcome, !appState.isCurrentlyCleaning {
+            if let outcome = appState.lastManualCleanOutcome, !appState.isCurrentlyCleaning {
                 cleanOutcomeRow(outcome)
             }
         }
@@ -184,6 +173,8 @@ struct MenuBarView: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 4)
+        .accessibilityElement(children: .combine)
+        .accessibilityIdentifier(AccessibilityID.MenuBar.levelRow(level.rawValue))
     }
 
     // MARK: - Onboarding Prompt
@@ -199,6 +190,7 @@ struct MenuBarView: View {
                 NSApplication.shared.activate()
                 openWindow(id: "onboarding")
             }
+            .accessibilityIdentifier(AccessibilityID.MenuBar.getStarted)
         }
         .padding(20)
     }
@@ -228,7 +220,7 @@ struct MenuBarView: View {
     /// Inline result of the last manual blitz. Failures are also listed in
     /// the dashboard banner directly below.
     @ViewBuilder
-    private func cleanOutcomeRow(_ outcome: CleanOutcome) -> some View {
+    private func cleanOutcomeRow(_ outcome: ManualCleanOutcome) -> some View {
         HStack(spacing: 6) {
             Image(systemName: outcome.failed == 0 ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
                 .font(.system(size: 11))
@@ -239,23 +231,16 @@ struct MenuBarView: View {
                      + (outcome.skipped > 0 ? " · \(outcome.skipped) locked, skipped" : ""))
                     .font(.system(size: 10))
                     .foregroundStyle(.secondary)
+                    .accessibilityIdentifier(AccessibilityID.MenuBar.outcome)
             } else {
                 Text("\(outcome.succeeded) cleaned · \(outcome.failed) failed")
                     .font(.system(size: 10, weight: .medium))
                     .foregroundStyle(.orange)
+                    .accessibilityIdentifier(AccessibilityID.MenuBar.outcome)
             }
             Spacer()
         }
         .transition(.opacity)
-    }
-
-    /// Summary of the most recent manual blitz, shown inline in the popover.
-    private struct CleanOutcome {
-        let succeeded: Int
-        let failed: Int
-        /// Successful results that touched nothing because the target is locked.
-        let skipped: Int
-        let bytes: Int64
     }
 
     private func prepareManualClean() {
@@ -264,15 +249,17 @@ struct MenuBarView: View {
         let jobs = appState.snapshotCleaningJobs()
         guard !jobs.isEmpty else { return }
 
-        cleanOutcome = nil // clear the previous run's result
+        appState.lastManualCleanOutcome = nil // clear the previous run's result
 
         isPreparingCleanPreview = true
         Task.detached(priority: .userInitiated) {
             let reports = DryRun.plan(jobs: jobs)
             await MainActor.run {
-                pendingCleanReports = reports
+                // The popover may have closed meanwhile (it does whenever the
+                // app changes activation); the click still asked for this.
                 isPreparingCleanPreview = false
-                cleanConfirmationPresented = true
+                NSApplication.shared.activate()
+                openWindow(id: "confirm-blitz", value: DryRunPresentation(reports: reports))
             }
         }
     }

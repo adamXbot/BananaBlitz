@@ -20,6 +20,12 @@ enum SelfTest {
         let detail: String
     }
 
+    /// Payload for `.sheet(item:)`; see `DryRunPresentation` for why.
+    struct Presentation: Identifiable {
+        let id = UUID()
+        let reports: [Report]
+    }
+
     /// Walk every target. Safe to call from a background queue.
     static func run() -> [Report] {
         let fm = FileManager.default

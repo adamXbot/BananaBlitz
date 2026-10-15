@@ -20,6 +20,7 @@ struct SchedulePane: View {
                 }
             }
             .pickerStyle(.menu)
+            .accessibilityIdentifier(AccessibilityID.Settings.scheduleInterval)
 
             VStack(alignment: .leading, spacing: 4) {
                 Toggle("Pause schedule", isOn: Binding(
@@ -29,11 +30,19 @@ struct SchedulePane: View {
                         scheduler.updateSchedule()
                     }
                 ))
+                .accessibilityIdentifier(AccessibilityID.Settings.pauseSchedule)
 
-                if scheduler.isActive, let timeLeft = scheduler.timeUntilNextClean {
-                    Text("Next clean \(timeLeft)")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                if scheduler.isActive {
+                    // Re-evaluated each minute so the countdown keeps moving
+                    // while the window stays open; nothing else publishes it.
+                    TimelineView(.periodic(from: .now, by: 60)) { _ in
+                        if let timeLeft = scheduler.timeUntilNextClean {
+                            Text("Next clean \(timeLeft)")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                                .accessibilityIdentifier(AccessibilityID.Settings.nextClean)
+                        }
+                    }
                 }
             }
 
@@ -43,6 +52,7 @@ struct SchedulePane: View {
                     info: "Scheduled cleans run with no confirmation, so by default the destructive Lock with Immutable File strategy is downgraded to a plain wipe for unattended runs. Turn this on only if you want directories deleted and locked automatically."
                 )
             }
+            .accessibilityIdentifier(AccessibilityID.Settings.allowLocking)
         }
 
         Section("Cleaning level") {
@@ -66,6 +76,7 @@ struct SchedulePane: View {
                 )
             }
             .pickerStyle(.segmented)
+            .accessibilityIdentifier(AccessibilityID.Settings.defaultLevel)
         }
 
         Section("Strategy") {
@@ -86,6 +97,7 @@ struct SchedulePane: View {
                 )
             }
             .pickerStyle(.menu)
+            .accessibilityIdentifier(AccessibilityID.Settings.globalStrategy)
         }
     }
 }

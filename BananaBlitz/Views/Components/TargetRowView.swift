@@ -41,6 +41,7 @@ struct TargetRowView: View {
                         Text(target.name)
                             .font(.system(size: 12, weight: .medium))
                             .lineLimit(1)
+                            .accessibilityIdentifier(AccessibilityID.Targets.row(target.id))
 
                         if isLocked {
                             Image(systemName: "lock.fill")
@@ -62,11 +63,14 @@ struct TargetRowView: View {
                     Text("not present on this Mac")
                         .font(.caption2)
                         .foregroundStyle(.tertiary)
+                        .accessibilityIdentifier(AccessibilityID.Targets.size(target.id))
                 } else if size > 0 {
                     SizeLabel(bytes: size, style: .compact)
+                        .accessibilityIdentifier(AccessibilityID.Targets.size(target.id))
                 }
 
-                // Toggle
+                // Toggle. The visible label is hidden, so give assistive
+                // technology a real one instead of an anonymous switch.
                 Toggle("", isOn: Binding(
                     get: { isEnabled },
                     set: { _ in onToggle() }
@@ -74,6 +78,8 @@ struct TargetRowView: View {
                 .toggleStyle(.switch)
                 .controlSize(.small)
                 .labelsHidden()
+                .accessibilityLabel("Clean \(target.name)")
+                .accessibilityIdentifier(AccessibilityID.Targets.toggle(target.id))
 
                 // Disclosure affordance — signals the row expands to reveal
                 // the side-effect, path, and strategy.
@@ -132,6 +138,8 @@ struct TargetRowView: View {
                             .pickerStyle(.menu)
                             .controlSize(.mini)
                             .labelsHidden()
+                            .accessibilityLabel("Strategy for \(target.name)")
+                            .accessibilityIdentifier(AccessibilityID.Targets.strategy(target.id))
                         }
                     } else {
                         HStack(spacing: 4) {
@@ -157,6 +165,7 @@ struct TargetRowView: View {
                             }
                             .buttonStyle(.plain)
                             .foregroundStyle(.secondary)
+                            .accessibilityIdentifier(AccessibilityID.Targets.verify(target.id))
                         }
 
                         if isLocked, let onUnlock = onUnlock {
@@ -172,6 +181,7 @@ struct TargetRowView: View {
                             .buttonStyle(.plain)
                             .foregroundStyle(.orange)
                             .help("Removes the lock file and recreates the empty directory so the system daemon can use it again. Cleaning never does this on its own.")
+                            .accessibilityIdentifier(AccessibilityID.Targets.unlock(target.id))
                         }
                     }
                 }

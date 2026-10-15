@@ -36,7 +36,11 @@ final class UpdaterService {
         )
 
         let feedURL = Bundle.main.object(forInfoDictionaryKey: "SUFeedURL") as? String
-        if let feedURL, !feedURL.isEmpty {
+        let hostingTests = ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil
+        if LaunchConfiguration.isUITesting || hostingTests {
+            // No update checks or Sparkle UI while a test suite drives or hosts the app.
+            log.debug("Sparkle updater is dormant: test launch")
+        } else if let feedURL, !feedURL.isEmpty {
             do {
                 try controller.updater.start()
                 log.info("Sparkle updater started with feed: \(feedURL, privacy: .public)")

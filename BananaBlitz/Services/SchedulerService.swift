@@ -172,6 +172,7 @@ final class SchedulerService: ObservableObject {
                     state.addResult(result)
                 }
                 self.finishCleaning(state: state)
+                self.refreshScanCache(for: state)
                 self.nextCleanDate = Date().addingTimeInterval(state.scheduleInterval.rawValue)
 
                 let failures = results.filter { !$0.success }
@@ -220,6 +221,7 @@ final class SchedulerService: ObservableObject {
                     state.addResult(result)
                 }
                 self.finishCleaning(state: state)
+                self.refreshScanCache(for: state)
 
                 if self.isActive {
                     self.nextCleanDate = Date().addingTimeInterval(state.scheduleInterval.rawValue)
@@ -227,6 +229,16 @@ final class SchedulerService: ObservableObject {
 
                 completion(results)
             }
+        }
+    }
+
+    /// "Blitz Now" from the confirmation window: run, then record the outcome
+    /// on `AppState` for the popover. A skipped run (another clean in flight)
+    /// leaves the previous outcome untouched.
+    func performManualCleanRecordingOutcome() {
+        performManualClean { [weak self] results in
+            guard !results.isEmpty, let state = self?.appState else { return }
+            state.lastManualCleanOutcome = ManualCleanOutcome(results: results)
         }
     }
 
@@ -242,6 +254,17 @@ final class SchedulerService: ObservableObject {
 
     private func finishCleaning(state: AppState) {
         state.endCleaning()
+    }
+
+    /// The popover and the Targets tab show cached sizes. Refresh them after
+    /// a clean so they stop reporting the bytes that were just removed.
+    func refreshScanCache(for state: AppState) {
+        DispatchQueue.global(qos: .utility).async {
+            let summary = TargetScanner.shared.summariseAll()
+            DispatchQueue.main.async {
+                state.applyScanSummary(summary)
+            }
+        }
     }
 
     /// The jobs an unattended run will actually execute: the current workload
@@ -271,6 +294,8 @@ final class SchedulerService: ObservableObject {
     // MARK: - Notifications
 
     private func requestNotificationPermission() {
+        // The system permission alert would block the UI test suite.
+        guard !LaunchConfiguration.isUITesting else { return }
         UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { [weak self] _, error in
             if let error = error {
                 self?.log.error("Notification authorisation failed: \(error.localizedDescription, privacy: .public)")

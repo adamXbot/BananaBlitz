@@ -59,6 +59,7 @@ the captured identity. Credentials remain in the configured local/CI stores.
 - `security-check` — Run the declared security checks
 - `docs-check` — Validate docs and their visibility
 - `test` — Run the default automated tests
+- `ui-test` — Run the end-to-end UI suite against a sandboxed home (needs a logged-in GUI session)
 - `version` — Change the marketing version deliberately
 - `changelog` — Refresh release notes and feeds
 - `ci-status` — Read CI for the selected revision

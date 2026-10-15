@@ -14,6 +14,7 @@ struct ScanStepView: View {
             VStack(spacing: 8) {
                 Text(isScanning ? "Scanning your system..." : "Scan Complete")
                     .font(.system(size: 20, weight: .bold, design: .rounded))
+                    .accessibilityIdentifier(AccessibilityID.Onboarding.scanTitle)
 
                 if isScanning {
                     ProgressView()
@@ -23,6 +24,7 @@ struct ScanStepView: View {
                     Text("Found \(totalSize.formattedBytes) of tracking data across \(foundTargetCount) targets")
                         .font(.system(size: 13))
                         .foregroundStyle(.secondary)
+                        .accessibilityIdentifier(AccessibilityID.Onboarding.scanSummary)
                 }
             }
             .padding(.top, 16)
@@ -145,9 +147,6 @@ struct ScanStepView: View {
         )
         .opacity(isRevealed ? 1 : 0)
         .offset(y: isRevealed ? 0 : 10)
-        .onTapGesture {
-            // Toggle expansion could be added here
-        }
     }
 
     // MARK: - FDA Banner
@@ -187,6 +186,7 @@ struct ScanStepView: View {
                         .strokeBorder(Color.orange.opacity(0.3), lineWidth: 1)
                 )
         )
+        .accessibilityIdentifier(AccessibilityID.Onboarding.scanAccessBanner)
     }
 
     // MARK: - Helpers

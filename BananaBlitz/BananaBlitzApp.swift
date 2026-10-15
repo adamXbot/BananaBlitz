@@ -8,7 +8,10 @@ import AppKit
 struct BananaBlitzApp: App {
     @StateObject private var appState = AppState()
     @StateObject private var scheduler = SchedulerService()
-    @StateObject private var menuBar = SurfaceMenuBarPreference(defaultIcon: MenuBarIconStyle.default.rawValue)
+    @StateObject private var menuBar = SurfaceMenuBarPreference(
+        defaultIcon: MenuBarIconStyle.default.rawValue,
+        defaults: LaunchConfiguration.defaults
+    )
     @StateObject private var updates: SurfaceUpdates
     @Environment(\.openWindow) private var openWindow
 
@@ -16,10 +19,17 @@ struct BananaBlitzApp: App {
     private let updater: UpdaterService
     private let app = SurfaceApp.bananaBlitz
 
+    /// The popover's `onAppear` fires every time it opens, not once per
+    /// launch, so bootstrap guards itself: re-running it would re-arm the
+    /// schedule timer and push the next clean out again on every open.
+    @State private var hasBootstrapped = false
+
     init() {
+        // No-op unless launched by the UI test suite (see LaunchConfiguration).
+        LaunchConfiguration.applyIfNeeded()
         // Older builds stored the menu bar icon under their own key; move it
         // before the preference object reads the shared one.
-        MenuBarIconStyle.migrateLegacyPreference()
+        MenuBarIconStyle.migrateLegacyPreference(in: LaunchConfiguration.defaults)
         // Dock icon only while a window is open; menu bar only otherwise.
         SurfaceActivation.shared.start()
 
@@ -88,6 +98,18 @@ struct BananaBlitzApp: App {
         }
         .windowResizability(.contentSize)
         .defaultPosition(.center)
+
+        // "Blitz Now" confirmation. A real window, not a sheet on the popover:
+        // the popover is a MenuBarExtra and closes on the first click outside
+        // it, which includes a click inside an attached sheet, so a sheet's
+        // buttons could never fire their actions.
+        WindowGroup("Confirm Blitz", id: "confirm-blitz", for: DryRunPresentation.self) { $presentation in
+            ConfirmBlitzWindow(presentation: presentation)
+                .environmentObject(appState)
+                .environmentObject(scheduler)
+        }
+        .windowResizability(.contentSize)
+        .defaultPosition(.center)
     }
 
     /// General first, Updates last; five tabs in all.
@@ -113,6 +135,9 @@ struct BananaBlitzApp: App {
     /// (which now also runs catch-up cleans for any missed fires), apply
     /// default targets, and seed the scan + lock-state caches.
     private func bootstrap() {
+        guard !hasBootstrapped else { return }
+        hasBootstrapped = true
+
         scheduler.configure(with: appState)
 
         if appState.hasCompletedOnboarding && appState.enabledTargetIDs.isEmpty {

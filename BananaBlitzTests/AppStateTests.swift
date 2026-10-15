@@ -54,7 +54,7 @@ final class AppStateTests: XCTestCase {
 
     private func clearUserDefaults() {
         for key in Self.userDefaultsKeysToClear {
-            UserDefaults.standard.removeObject(forKey: key)
+            LaunchConfiguration.defaults.removeObject(forKey: key)
         }
     }
 

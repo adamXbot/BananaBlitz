@@ -26,6 +26,13 @@
     <true/>
     <key>NSHumanReadableCopyright</key>
     <string>© 2026 Adam Kostarelas</string>
+    <!-- Sparkle: the signed appcast each release publishes (served by the
+         adamxweb.com Worker from the gh-pages branch) and the public half of
+         the EdDSA key that signs every entry. -->
+    <key>SUFeedURL</key>
+    <string>https://adamxweb.com/bananablitz/appcast.xml</string>
+    <key>SUPublicEDKey</key>
+    <string>Qxx5Nb6RBuffgou+hwgSyl92JUu95Os5R67uglVS/xE=</string>
     <key>SUEnableAutomaticChecks</key>
     <false/>
 </dict>

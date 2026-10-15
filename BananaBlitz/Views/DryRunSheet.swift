@@ -60,9 +60,11 @@ struct DryRunSheet: View {
                     .font(.title3)
                 Text(title)
                     .font(.system(size: 14, weight: .semibold))
+                    .accessibilityIdentifier(AccessibilityID.DryRun.title)
                 Spacer()
                 Button("Close", action: onClose)
                     .keyboardShortcut(.cancelAction)
+                    .accessibilityIdentifier(AccessibilityID.DryRun.close)
             }
             .padding()
 
@@ -70,9 +72,9 @@ struct DryRunSheet: View {
 
             // Summary
             HStack(spacing: 24) {
-                summaryCell("Targets", "\(reports.count)")
-                summaryCell("Items", "\(totalItems)")
-                summaryCell("Bytes", totalBytes.formattedBytes)
+                summaryCell("Targets", "\(reports.count)", id: AccessibilityID.DryRun.targetCount)
+                summaryCell("Items", "\(totalItems)", id: AccessibilityID.DryRun.itemCount)
+                summaryCell("Bytes", totalBytes.formattedBytes, id: AccessibilityID.DryRun.byteCount)
             }
             .padding()
 
@@ -85,6 +87,7 @@ struct DryRunSheet: View {
                         .foregroundStyle(.secondary)
                     Text("No enabled targets")
                         .foregroundStyle(.secondary)
+                        .accessibilityIdentifier(AccessibilityID.DryRun.empty)
                 }
                 .padding(40)
             } else {
@@ -107,6 +110,7 @@ struct DryRunSheet: View {
                         .foregroundStyle(hasAggressive ? .primary : .secondary)
                         .fixedSize(horizontal: false, vertical: true)
                         .frame(maxWidth: .infinity, alignment: .leading)
+                        .accessibilityIdentifier(AccessibilityID.DryRun.footerWarning)
 
                     HStack(spacing: 10) {
                         if let saveMessage {
@@ -121,16 +125,20 @@ struct DryRunSheet: View {
 
                         if hasAggressive {
                             Button("Save Recovery Script…") { saveRecoveryScript() }
+                                .accessibilityIdentifier(AccessibilityID.DryRun.saveRecovery)
                         }
 
+                        // The header Close button already carries the Escape
+                        // shortcut; two bindings for one key would be ambiguous.
                         Button("Cancel", action: onClose)
-                            .keyboardShortcut(.cancelAction)
+                            .accessibilityIdentifier(AccessibilityID.DryRun.cancel)
 
                         Button(confirmTitle, role: confirmRole) {
                             onConfirm()
                         }
                         .keyboardShortcut(.defaultAction)
                         .disabled(reports.isEmpty)
+                        .accessibilityIdentifier(AccessibilityID.DryRun.confirm)
                     }
                 }
                 .padding()
@@ -151,6 +159,7 @@ struct DryRunSheet: View {
                 HStack(spacing: 6) {
                     Text(report.target.name)
                         .font(.system(size: 12, weight: .medium))
+                        .accessibilityIdentifier(AccessibilityID.DryRun.row(report.target.id))
                     if aggressive {
                         Text("DELETES, THEN LOCKS")
                             .font(.system(size: 8, weight: .bold))
@@ -159,6 +168,7 @@ struct DryRunSheet: View {
                             .padding(.vertical, 1)
                             .background(Capsule().fill(.orange))
                             .accessibilityLabel("Destructive: deletes the directory, then locks it")
+                            .accessibilityIdentifier(AccessibilityID.DryRun.lockBadge)
                     }
                 }
                 Text(report.action)
@@ -209,13 +219,16 @@ struct DryRunSheet: View {
         }
     }
 
-    private func summaryCell(_ label: String, _ value: String) -> some View {
+    private func summaryCell(_ label: String, _ value: String, id: String) -> some View {
         VStack(alignment: .leading, spacing: 2) {
             Text(label)
                 .font(.system(size: 10))
                 .foregroundStyle(.secondary)
             Text(value)
                 .font(.system(size: 16, weight: .semibold, design: .rounded))
+                .accessibilityIdentifier(id)
         }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(label): \(value)")
     }
 }

@@ -13,8 +13,7 @@ struct CleanStepView: View {
     @State private var totalReclaimed: Int64 = 0
     @State private var currentTarget: String = ""
     @State private var results: [CleaningResult] = []
-    @State private var dryRunReports: [DryRunReport] = []
-    @State private var confirmationPresented = false
+    @State private var confirmation: DryRunPresentation?
     @State private var isPreparingPreview = false
 
     var body: some View {
@@ -32,15 +31,15 @@ struct CleanStepView: View {
             Spacer()
         }
         .padding(24)
-        .sheet(isPresented: $confirmationPresented) {
+        .sheet(item: $confirmation) { confirmation in
             DryRunSheet(
-                reports: dryRunReports,
+                reports: confirmation.reports,
                 title: "Confirm First Blitz",
                 confirmTitle: "Blitz It",
                 confirmRole: .destructive,
-                onClose: { confirmationPresented = false },
+                onClose: { self.confirmation = nil },
                 onConfirm: {
-                    confirmationPresented = false
+                    self.confirmation = nil
                     startCleaning()
                 }
             )
@@ -58,6 +57,7 @@ struct CleanStepView: View {
             VStack(spacing: 8) {
                 Text("Ready to Blitz!")
                     .font(.system(size: 24, weight: .bold, design: .rounded))
+                    .accessibilityIdentifier(AccessibilityID.Onboarding.readyTitle)
 
                 let targets = appState.enabledTargets
                 let totalSize = targets.reduce(Int64(0)) { $0 + (scanResults[$1.id] ?? 0) }
@@ -65,6 +65,7 @@ struct CleanStepView: View {
                 Text("Will clean \(targets.count) targets · \(totalSize.formattedBytes) estimated")
                     .font(.system(size: 13))
                     .foregroundStyle(.secondary)
+                    .accessibilityIdentifier(AccessibilityID.Onboarding.readySummary)
             }
 
             // Reflect the shared clean mutex: if a scheduled/catch-up clean is
@@ -79,6 +80,7 @@ struct CleanStepView: View {
                 prepareConfirmation()
             }
             .frame(width: 200)
+            .accessibilityIdentifier(AccessibilityID.Onboarding.blitz)
         }
     }
 
@@ -154,10 +156,12 @@ struct CleanStepView: View {
             VStack(spacing: 8) {
                 Text("All Clean! 🎉")
                     .font(.system(size: 24, weight: .bold, design: .rounded))
+                    .accessibilityIdentifier(AccessibilityID.Onboarding.completionTitle)
 
                 Text("\(totalReclaimed.formattedBytes) of tracking data removed")
                     .font(.system(size: 15))
                     .foregroundStyle(.secondary)
+                    .accessibilityIdentifier(AccessibilityID.Onboarding.completionBytes)
             }
 
             // Results summary
@@ -183,6 +187,8 @@ struct CleanStepView: View {
                     }
                 }
                 .foregroundStyle(.secondary)
+                .accessibilityElement(children: .combine)
+                .accessibilityIdentifier(AccessibilityID.Onboarding.completionSummary)
             }
 
             Text("BananaBlitz will continue cleaning on your chosen schedule.\nClick the 🍌 in your menu bar to manage.")
@@ -206,9 +212,8 @@ struct CleanStepView: View {
         DispatchQueue.global(qos: .userInitiated).async {
             let reports = DryRun.plan(jobs: jobs)
             DispatchQueue.main.async {
-                dryRunReports = reports
                 isPreparingPreview = false
-                confirmationPresented = true
+                confirmation = DryRunPresentation(reports: reports)
             }
         }
     }
@@ -261,6 +266,11 @@ struct CleanStepView: View {
                 }
                 // Release the shared clean mutex acquired in startCleaning().
                 appState.endCleaning()
+                // Sizes shown elsewhere were captured by the scan step.
+                DispatchQueue.global(qos: .utility).async {
+                    let summary = TargetScanner.shared.summariseAll()
+                    DispatchQueue.main.async { appState.applyScanSummary(summary) }
+                }
             }
         }
     }

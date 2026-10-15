@@ -11,10 +11,8 @@ struct DataPane: View {
 
     @State private var recoveryStatus: String?
     @State private var historyStatus: String?
-    @State private var dryRunReports: [DryRunReport] = []
-    @State private var dryRunSheetPresented = false
-    @State private var selfTestReports: [SelfTest.Report] = []
-    @State private var selfTestSheetPresented = false
+    @State private var dryRunPresentation: DryRunPresentation?
+    @State private var selfTestPresentation: SelfTest.Presentation?
 
     var body: some View {
         Section("Targets") {
@@ -26,16 +24,17 @@ struct DataPane: View {
                     }
                 }
             }
+            .accessibilityIdentifier(AccessibilityID.Settings.rescan)
 
             Button("Run Self-Test…") {
                 Task.detached(priority: .userInitiated) {
                     let reports = SelfTest.run()
                     await MainActor.run {
-                        selfTestReports = reports
-                        selfTestSheetPresented = true
+                        selfTestPresentation = SelfTest.Presentation(reports: reports)
                     }
                 }
             }
+            .accessibilityIdentifier(AccessibilityID.Settings.selfTest)
 
             Button("Preview Next Clean…") {
                 // Preview what the *scheduled* run will actually do: apply
@@ -48,17 +47,19 @@ struct DataPane: View {
                 Task.detached(priority: .userInitiated) {
                     let reports = DryRun.plan(jobs: jobs)
                     await MainActor.run {
-                        dryRunReports = reports
-                        dryRunSheetPresented = true
+                        dryRunPresentation = DryRunPresentation(reports: reports)
                     }
                 }
             }
+            .accessibilityIdentifier(AccessibilityID.Settings.dryRun)
         }
-        .sheet(isPresented: $dryRunSheetPresented) {
-            DryRunSheet(reports: dryRunReports) { dryRunSheetPresented = false }
+        // `.sheet(item:)` hands the data to the sheet: with `isPresented` plus
+        // a separate array the sheet could open with an empty report list.
+        .sheet(item: $dryRunPresentation) { presentation in
+            DryRunSheet(reports: presentation.reports) { dryRunPresentation = nil }
         }
-        .sheet(isPresented: $selfTestSheetPresented) {
-            SelfTestSheet(reports: selfTestReports) { selfTestSheetPresented = false }
+        .sheet(item: $selfTestPresentation) { presentation in
+            SelfTestSheet(reports: presentation.reports) { selfTestPresentation = nil }
         }
 
         Section("Recovery") {
@@ -67,16 +68,22 @@ struct DataPane: View {
                     recoveryStatus = message
                 }
             }
+            .accessibilityIdentifier(AccessibilityID.Settings.saveRecoveryScript)
 
             VStack(alignment: .leading, spacing: 4) {
                 Button("Create Local Snapshot") {
                     createSnapshot()
                 }
+                .accessibilityIdentifier(AccessibilityID.Settings.createSnapshot)
                 if let recoveryStatus {
                     Text(recoveryStatus)
                         .font(.caption)
                         .foregroundStyle(.secondary)
                         .textSelection(.enabled)
+                        .accessibilityIdentifier(AccessibilityID.Settings.recoveryStatus)
+                        // New identity per message: a text whose string merely
+                        // changes can keep a stale accessibility value.
+                        .id(recoveryStatus)
                 }
             }
         }
@@ -88,11 +95,14 @@ struct DataPane: View {
                         historyStatus = message
                     }
                 }
+                .accessibilityIdentifier(AccessibilityID.Settings.exportHistory)
                 if let historyStatus {
                     Text(historyStatus)
                         .font(.caption)
                         .foregroundStyle(.secondary)
                         .textSelection(.enabled)
+                        .accessibilityIdentifier(AccessibilityID.Settings.historyStatus)
+                        .id(historyStatus)
                 }
             }
         }
@@ -107,8 +117,17 @@ struct DataPane: View {
             ) {
                 scheduler.stop()
                 appState.resetAll()
-                NSApplication.shared.activate()
-                openWindow(id: "onboarding")
+                // Close Settings so setup is not left behind it. The dialog is
+                // key right now and Settings is its parent; the close is
+                // deferred a tick because a window cannot close while the
+                // dialog sheet is still attached to it.
+                let keyWindow = NSApplication.shared.keyWindow
+                let settings = keyWindow?.sheetParent ?? keyWindow
+                DispatchQueue.main.async {
+                    settings?.close()
+                    NSApplication.shared.activate()
+                    openWindow(id: "onboarding")
+                }
             }
         }
     }

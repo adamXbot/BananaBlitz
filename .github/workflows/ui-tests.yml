@@ -1,0 +1,100 @@
+name: UI tests
+
+# The end-to-end XCUITest suite (`just ui-test`). Separate from ci.yml,
+# which runs the BananaBlitz scheme through the shared pipeline with
+# signing disabled: an unsigned XCUITest runner is killed by macOS, so the
+# suite has its own scheme and an ad-hoc signed run here. The app under
+# test runs against a throwaway home directory (see
+# BananaBlitz/Support/LaunchConfiguration.swift); nothing on the runner's
+# real ~/Library is touched. Screenshots of every surface in light and
+# dark appearance are uploaded as an artifact.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ui-tests-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  ui:
+    name: End-to-end UI suite
+    # Same-repository changes only: a fork cannot drive the runner's screen.
+    if: >-
+      github.event_name != 'pull_request' ||
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: macos-15
+    timeout-minutes: 60
+
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Select Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
+      - name: Install the tested Just version
+        uses: extractions/setup-just@f8a3cce218d9f83db3a2ecd90e41ac3de6cdfd9b # v3
+        with:
+          just-version: '1.58.0'
+
+      - name: Install xcodegen
+        run: command -v xcodegen >/dev/null || brew install xcodegen
+
+      - name: Generate Xcode project
+        run: xcodegen generate
+
+      # Fails fast with a clear message if a system dialog is covering the
+      # runner's screen, instead of every test failing with "not hittable".
+      - name: UI preflight
+        run: |
+          set -o pipefail
+          xcodebuild test \
+            -scheme "BananaBlitz UI Tests" \
+            -destination 'platform=macOS' \
+            -configuration Debug \
+            -only-testing:BananaBlitzUITests/PreflightUITests \
+            -resultBundlePath PreflightResults.xcresult \
+            CODE_SIGN_IDENTITY="-" \
+            CODE_SIGNING_REQUIRED=NO
+
+      - name: UI suite
+        run: |
+          set -o pipefail
+          xcodebuild test \
+            -scheme "BananaBlitz UI Tests" \
+            -destination 'platform=macOS' \
+            -configuration Debug \
+            -skip-testing:BananaBlitzUITests/PreflightUITests \
+            -resultBundlePath UITestResults.xcresult \
+            CODE_SIGN_IDENTITY="-" \
+            CODE_SIGNING_REQUIRED=NO
+
+      - name: Export screenshots
+        if: always()
+        run: |
+          [ -d UITestResults.xcresult ] && \
+            xcrun xcresulttool export attachments --path UITestResults.xcresult --output-path ui-screenshots || true
+
+      - name: Upload results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ui-test-results
+          path: |
+            PreflightResults.xcresult
+            UITestResults.xcresult
+            ui-screenshots
+          if-no-files-found: ignore
+          retention-days: 14

@@ -16,6 +16,7 @@ struct TargetListView: View {
         Section {
             TextField("Search", text: $searchText, prompt: Text("Name, description or path"))
                 .textFieldStyle(.roundedBorder)
+                .accessibilityIdentifier(AccessibilityID.Targets.search)
 
             Picker("Show", selection: $filterLevel) {
                 Text("All levels").tag(CleaningLevel?.none)
@@ -24,6 +25,7 @@ struct TargetListView: View {
                 }
             }
             .pickerStyle(.menu)
+            .accessibilityIdentifier(AccessibilityID.Targets.filter)
         }
 
         Section {
@@ -75,6 +77,8 @@ struct TargetListView: View {
                         .foregroundStyle(.secondary)
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel("\(allEnabled(targets) ? "Disable" : "Enable") all \(level.displayName) targets")
+                .accessibilityIdentifier(AccessibilityID.Targets.sectionToggleAll(level.rawValue))
             }
             .padding(.horizontal, 8)
             .padding(.vertical, 8)

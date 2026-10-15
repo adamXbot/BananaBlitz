@@ -51,6 +51,8 @@ struct ScheduleStepView: View {
                     .pickerStyle(.menu)
                     .labelsHidden()
                     .frame(width: 200)
+                    .accessibilityLabel("Cleaning interval")
+                    .accessibilityIdentifier(AccessibilityID.Onboarding.scheduleInterval)
                 }
                 .padding(16)
                 .frame(maxWidth: 320)
