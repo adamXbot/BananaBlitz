@@ -313,12 +313,22 @@ class BananaBlitzUITestCase: XCTestCase {
     }
 
     /// Open Settings from the popover's gear and wait for the window.
+    ///
+    /// The popover stays open after the gear is clicked. On a small display
+    /// (the 1024×768 CI runner) it then overlaps the Settings window and
+    /// swallows clicks on the toolbar tabs, so it is closed explicitly once
+    /// the window is up.
     @discardableResult
     func openSettings() -> XCUIElement {
-        if settingsWindow.exists { return settingsWindow }
+        if settingsWindow.exists {
+            closeMenuBarPopover()
+            return settingsWindow
+        }
         openMenuBarPopover()
         app.buttons["Settings"].firstMatch.click()
-        return waitFor(settingsWindow)
+        let window = waitFor(settingsWindow)
+        closeMenuBarPopover()
+        return window
     }
 
     /// Open the About window from Settings ▸ General.
@@ -338,8 +348,14 @@ class BananaBlitzUITestCase: XCTestCase {
         if inSheet.exists { return inSheet }
         let inDialog = app.dialogs.buttons[title].firstMatch
         if inDialog.exists { return inDialog }
-        let predicate = NSPredicate(format: "(title == %@ OR label == %@) AND isHittable == true", title, title)
-        return app.buttons.matching(predicate).firstMatch
+        // `hittable` is not a valid key path in an element query (Xcode 26
+        // rejects it), so resolve the candidates and pick the hittable one.
+        let byTitle = NSPredicate(format: "title == %@ OR label == %@", title, title)
+        let candidates = app.buttons.matching(byTitle)
+        if let hittable = candidates.allElementsBoundByIndex.first(where: { $0.isHittable }) {
+            return hittable
+        }
+        return candidates.firstMatch
     }
 
     // MARK: - Checkboxes and switches
