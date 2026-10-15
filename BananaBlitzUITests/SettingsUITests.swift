@@ -146,15 +146,26 @@ final class SettingsUITests: BananaBlitzUITestCase {
         element(AccessibilityID.DryRun.close).click()
         waitUntilGone(element(AccessibilityID.DryRun.title))
         XCTAssertEqual(sandbox.contents(of: .adPrivacy).count, 3, "a preview never touches the disk")
+    }
 
-        // Opting in to scheduled locking changes the preview accordingly.
-        selectSettingsTab("Schedule")
-        clickToggle(element(AccessibilityID.Settings.allowLocking))
+    /// Opting in to scheduled locking changes the preview accordingly. A
+    /// separate launch rather than a tab switch after the first preview: on
+    /// the macOS 15 runner a pane entered after a sheet or pop-up in the same
+    /// Settings session stops responding to clicks.
+    func test_dryRunPreviewKeepsTheLockWhenScheduledLockingIsAllowed() throws {
+        try sandbox.grantFullDiskAccess()
+        try sandbox.populate(.adPrivacy)
+        try sandbox.seedStrategies([Fixture.adPrivacy.id: "replaceWithFile"])
+        var options = LaunchOptions()
+        options.defaults[StorageKey.allowAggressiveScheduledClean] = true
+        try launchApp(options)
+        openSettings()
         selectSettingsTab("Data")
         clickControl(element(AccessibilityID.Settings.dryRun))
         waitForLabel(element(AccessibilityID.DryRun.title), toContain: "Preview Next Clean")
         waitFor(element(AccessibilityID.DryRun.lockBadge))
         element(AccessibilityID.DryRun.close).click()
+        waitUntilGone(element(AccessibilityID.DryRun.title))
     }
 
     func test_selfTestReportsEveryTarget() throws {
