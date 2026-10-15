@@ -290,6 +290,25 @@ class BananaBlitzUITestCase: XCTestCase {
             ? inToolbar
             : settingsWindow.descendants(matching: .any).matching(byLabel).firstMatch
         waitFor(tab, file: file, line: line).click()
+        // The window takes the tab's name as its title and resizes to the
+        // pane with an animation. A click issued before that settles lands on
+        // a stale frame (on the CI runner, "Preview Next Clean…" resolved to
+        // the row above it), so wait for the title and a stable frame.
+        let titled = NSPredicate(format: "title == %@", name)
+        _ = XCTWaiter().wait(for: [XCTNSPredicateExpectation(predicate: titled, object: settingsWindow)], timeout: 5)
+        waitForSettingsWindowToSettle()
+    }
+
+    /// Wait until the Settings window's frame stops changing.
+    func waitForSettingsWindowToSettle(timeout: TimeInterval = 5) {
+        let deadline = Date().addingTimeInterval(timeout)
+        var last = settingsWindow.frame
+        repeat {
+            Thread.sleep(forTimeInterval: 0.3)
+            let now = settingsWindow.frame
+            if now == last && !now.isEmpty { return }
+            last = now
+        } while Date() < deadline
     }
 
     /// Whether a segment reports itself selected (trait or value).
@@ -344,18 +363,20 @@ class BananaBlitzUITestCase: XCTestCase {
     /// `app.buttons[title]` can resolve to the Touch Bar mirror of the same
     /// button, which cannot be clicked.
     func dialogButton(_ title: String) -> XCUIElement {
-        let inSheet = app.sheets.buttons[title].firstMatch
-        if inSheet.exists { return inSheet }
-        let inDialog = app.dialogs.buttons[title].firstMatch
-        if inDialog.exists { return inDialog }
-        // `hittable` is not a valid key path in an element query (Xcode 26
-        // rejects it), so resolve the candidates and pick the hittable one.
         let byTitle = NSPredicate(format: "title == %@ OR label == %@", title, title)
-        let candidates = app.buttons.matching(byTitle)
-        if let hittable = candidates.allElementsBoundByIndex.first(where: { $0.isHittable }) {
-            return hittable
-        }
-        return candidates.firstMatch
+        // Only buttons inside a sheet, dialog or window: the Touch Bar mirror
+        // lives outside them and cannot be clicked. The dialog may still be
+        // animating in when this is called, so poll rather than resolve once.
+        let scopes: [XCUIElementQuery] = [app.sheets, app.dialogs, app.windows]
+        let deadline = Date().addingTimeInterval(uiTimeout)
+        repeat {
+            for scope in scopes {
+                let button = scope.descendants(matching: .button).matching(byTitle).firstMatch
+                if button.exists { return button }
+            }
+            Thread.sleep(forTimeInterval: 0.25)
+        } while Date() < deadline
+        return app.sheets.descendants(matching: .button).matching(byTitle).firstMatch
     }
 
     // MARK: - Checkboxes and switches
