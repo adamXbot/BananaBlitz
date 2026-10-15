@@ -323,8 +323,11 @@ class BananaBlitzUITestCase: XCTestCase {
     /// `selectSettingsTab`), click at the compensated position instead.
     func clickControl(_ control: XCUIElement, file: StaticString = #filePath, line: UInt = #line) {
         waitFor(control, file: file, line: line)
-        let content = settingsWindow.scrollViews.firstMatch
-        if content.exists, control.frame.minY < content.frame.minY - 2 {
+        // The whole pane is offset or none of it is, and only its first
+        // control is reported above the scroll view, so decide from that
+        // control rather than from the one being clicked.
+        if paneControlsAreAboveTheScrollView() {
+            let content = settingsWindow.scrollViews.firstMatch
             let inset = content.frame.minY - settingsWindow.frame.minY
             control.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
                 .withOffset(CGVector(dx: 0, dy: inset))
