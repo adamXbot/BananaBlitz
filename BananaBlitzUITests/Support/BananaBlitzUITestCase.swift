@@ -165,7 +165,9 @@ class BananaBlitzUITestCase: XCTestCase {
             return self.displayedText(of: element).contains(text)
         }
         let expectation = XCTNSPredicateExpectation(predicate: predicate, object: element)
-        XCTAssertEqual(XCTWaiter().wait(for: [expectation], timeout: timeout ?? uiTimeout), .completed,
+        let result = XCTWaiter().wait(for: [expectation], timeout: timeout ?? uiTimeout)
+        if result != .completed { attachHierarchy("hierarchy-when-\(text)-was-missing") }
+        XCTAssertEqual(result, .completed,
                        "Expected \"\(text)\", got \"\(element.exists ? displayedText(of: element) : "<absent>")\"",
                        file: file, line: line)
     }
@@ -283,7 +285,8 @@ class BananaBlitzUITestCase: XCTestCase {
     /// Switch to a Settings toolbar tab by title ("General", "Targets",
     /// "Schedule", "Data", "Updates"). The tabs are shared surface code with
     /// no identifiers, so they are matched by label.
-    func selectSettingsTab(_ name: String, file: StaticString = #filePath, line: UInt = #line) {
+    func selectSettingsTab(_ name: String, heal: Bool = true,
+                           file: StaticString = #filePath, line: UInt = #line) {
         let byLabel = NSPredicate(format: "label == %@ OR title == %@", name, name)
         let inToolbar = settingsWindow.toolbars.descendants(matching: .any).matching(byLabel).firstMatch
         let tab = inToolbar.waitForExistence(timeout: 3)
@@ -292,11 +295,31 @@ class BananaBlitzUITestCase: XCTestCase {
         waitFor(tab, file: file, line: line).click()
         // The window takes the tab's name as its title and resizes to the
         // pane with an animation. A click issued before that settles lands on
-        // a stale frame (on the CI runner, "Preview Next Clean…" resolved to
-        // the row above it), so wait for the title and a stable frame.
+        // a stale frame, so wait for the title and a stable frame.
         let titled = NSPredicate(format: "title == %@", name)
         _ = XCTWaiter().wait(for: [XCTNSPredicateExpectation(predicate: titled, object: settingsWindow)], timeout: 5)
         waitForSettingsWindowToSettle()
+        // On macOS 15 the pane's accessibility frames can come back without
+        // the toolbar inset after a switch from an expanded Targets row (the
+        // CI runner clicked "Preview Next Clean…" and hit the row 80 pt
+        // above). Detect that and re-enter the pane through another tab.
+        if heal, paneFramesAreStale(below: tab) {
+            attachHierarchy("stale-pane-frames-\(name)")
+            selectSettingsTab(name == "General" ? "Schedule" : "General", heal: false, file: file, line: line)
+            selectSettingsTab(name, heal: false, file: file, line: line)
+            XCTAssertFalse(paneFramesAreStale(below: tab),
+                           "\(name) pane still reports frames above the toolbar", file: file, line: line)
+        }
+    }
+
+    /// Whether the pane's content reports frames that overlap the toolbar.
+    private func paneFramesAreStale(below tab: XCUIElement) -> Bool {
+        let content = settingsWindow.scrollViews.firstMatch
+        guard content.exists, tab.exists else { return false }
+        let toolbarBottom = tab.frame.maxY
+        if content.frame.minY < toolbarBottom - 2 { return true }
+        let firstChild = content.children(matching: .any).firstMatch
+        return firstChild.exists && firstChild.frame.minY < toolbarBottom - 2
     }
 
     /// Wait until the Settings window's frame stops changing.
@@ -394,6 +417,14 @@ class BananaBlitzUITestCase: XCTestCase {
     /// result. The runner is sandboxed, so files cannot be written elsewhere;
     /// export them with `xcrun xcresulttool export attachments` (see
     /// `just test-ui`).
+    /// Attach the app's accessibility hierarchy for post-mortem reading.
+    func attachHierarchy(_ name: String) {
+        let attachment = XCTAttachment(string: app.debugDescription)
+        attachment.name = name
+        attachment.lifetime = .keepAlways
+        add(attachment)
+    }
+
     func saveScreenshot(_ name: String, of element: XCUIElement? = nil) {
         // Fall back to the whole screen when the element is not on screen,
         // so a screenshot can never fail a test on its own.
