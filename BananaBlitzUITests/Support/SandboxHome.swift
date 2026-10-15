@@ -28,6 +28,22 @@ struct SandboxHome {
         library.appendingPathComponent("Application Support/BananaBlitz/state.json")
     }
 
+    /// Write a persisted `state.json` with per-target strategies (raw
+    /// `CleaningStrategy` values keyed by target id) before the app launches.
+    /// The app fills the enabled set and the remaining strategies from the
+    /// level on first launch, so only the overrides need seeding.
+    func seedStrategies(_ strategies: [String: String]) throws {
+        let state: [String: Any] = [
+            "enabledTargetIDs": [String](),
+            "targetStrategies": strategies,
+            "cleaningHistory": [Any](),
+            "totalBytesReclaimed": 0,
+        ]
+        try FileManager.default.createDirectory(at: stateFile.deletingLastPathComponent(),
+                                                withIntermediateDirectories: true)
+        try JSONSerialization.data(withJSONObject: state).write(to: stateFile)
+    }
+
     /// Make the app's Full Disk Access probe succeed. `PermissionChecker`
     /// treats a readable `~/Library/Biome` as proof of access.
     func grantFullDiskAccess() throws {

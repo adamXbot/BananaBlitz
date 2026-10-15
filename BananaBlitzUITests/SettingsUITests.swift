@@ -127,21 +127,14 @@ final class SettingsUITests: BananaBlitzUITestCase {
     func test_dryRunPreviewIsReadOnlyAndMirrorsTheScheduledRun() throws {
         try sandbox.grantFullDiskAccess()
         try sandbox.populate(.adPrivacy)
+        // A lock strategy on one target; the scheduled preview must show it
+        // downgraded to a wipe because locking on schedule is off. Seeded
+        // rather than chosen in the Targets pane: choosing it there is
+        // covered by TargetsUITests, and on the macOS 15 runner the Data
+        // pane entered after that pop-up ignores clicks.
+        try sandbox.seedStrategies([Fixture.adPrivacy.id: "replaceWithFile"])
         try launchApp()
-        var window = openSettings()
-
-        // Set a lock strategy on one target; the scheduled preview must show
-        // it downgraded to a wipe because locking on schedule is off.
-        selectSettingsTab("Targets")
-        element(AccessibilityID.Targets.row(Fixture.adPrivacy.id)).click()
-        choose("Lock with Immutable File", inPopUp: AccessibilityID.Targets.strategy(Fixture.adPrivacy.id))
-        collapseTargetRow(Fixture.adPrivacy.id)
-
-        // On the macOS 15 runner the Data pane entered straight after the
-        // strategy pop-up ignores clicks and reports stale frames; a fresh
-        // window lays it out cleanly (every straight-to-Data test passes).
-        closeWindow(window)
-        window = openSettings()
+        let window = openSettings()
         selectSettingsTab("Data")
         clickControl(element(AccessibilityID.Settings.dryRun))
         waitForLabel(element(AccessibilityID.DryRun.title), toContain: "Preview Next Clean")
@@ -157,8 +150,6 @@ final class SettingsUITests: BananaBlitzUITestCase {
         // Opting in to scheduled locking changes the preview accordingly.
         selectSettingsTab("Schedule")
         clickControl(element(AccessibilityID.Settings.allowLocking))
-        closeWindow(window)
-        window = openSettings()
         selectSettingsTab("Data")
         clickControl(element(AccessibilityID.Settings.dryRun))
         waitForLabel(element(AccessibilityID.DryRun.title), toContain: "Preview Next Clean")
