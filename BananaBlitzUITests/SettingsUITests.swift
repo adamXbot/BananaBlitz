@@ -52,7 +52,7 @@ final class SettingsUITests: BananaBlitzUITestCase {
 
         waitFor(element(AccessibilityID.Settings.nextClean))
         choose("Every hour", inPopUp: AccessibilityID.Settings.scheduleInterval)
-        clickControl(element(AccessibilityID.Settings.pauseSchedule))
+        clickToggle(element(AccessibilityID.Settings.pauseSchedule))
         waitUntilGone(element(AccessibilityID.Settings.nextClean))
 
         openMenuBarPopover()
@@ -99,7 +99,7 @@ final class SettingsUITests: BananaBlitzUITestCase {
 
         let shortcut = waitFor(element(AccessibilityID.Settings.keyboardShortcut))
         XCTAssertFalse(isOn(shortcut), "global shortcut is off by default")
-        shortcut.click()
+        clickToggle(shortcut)
         XCTAssertTrue(isOn(shortcut))
         let sparkles = settingsWindow.buttons["Sparkles"].firstMatch
         sparkles.click()
@@ -149,7 +149,7 @@ final class SettingsUITests: BananaBlitzUITestCase {
 
         // Opting in to scheduled locking changes the preview accordingly.
         selectSettingsTab("Schedule")
-        clickControl(element(AccessibilityID.Settings.allowLocking))
+        clickToggle(element(AccessibilityID.Settings.allowLocking))
         selectSettingsTab("Data")
         clickControl(element(AccessibilityID.Settings.dryRun))
         waitForLabel(element(AccessibilityID.DryRun.title), toContain: "Preview Next Clean")

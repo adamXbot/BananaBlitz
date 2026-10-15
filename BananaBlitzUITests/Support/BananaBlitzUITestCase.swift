@@ -337,6 +337,34 @@ class BananaBlitzUITestCase: XCTestCase {
         }
     }
 
+    /// Flip a toggle in a Settings pane and wait for its value to change.
+    /// On the macOS 15 runner a pane's switches can be reported 80 pt too
+    /// high while its pop-ups are placed correctly, so the pane-level check
+    /// in `clickControl` does not catch them; a toggle can be verified by
+    /// its value instead, so retry at the inset-compensated position.
+    func clickToggle(_ toggle: XCUIElement, file: StaticString = #filePath, line: UInt = #line) {
+        waitFor(toggle, file: file, line: line)
+        let before = isOn(toggle)
+        toggle.click()
+        if waitForToggle(toggle, toBe: !before, timeout: 2) { return }
+        let content = settingsWindow.scrollViews.firstMatch
+        let inset = content.exists ? content.frame.minY - settingsWindow.frame.minY : 0
+        toggle.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
+            .withOffset(CGVector(dx: 0, dy: inset))
+            .click()
+        XCTAssertTrue(waitForToggle(toggle, toBe: !before, timeout: uiTimeout),
+                      "\(toggle) did not flip", file: file, line: line)
+    }
+
+    private func waitForToggle(_ toggle: XCUIElement, toBe on: Bool, timeout: TimeInterval) -> Bool {
+        let predicate = NSPredicate { object, _ in
+            guard let element = object as? XCUIElement, element.exists else { return false }
+            return self.isOn(element) == on
+        }
+        let expectation = XCTNSPredicateExpectation(predicate: predicate, object: toggle)
+        return XCTWaiter().wait(for: [expectation], timeout: timeout) == .completed
+    }
+
     /// Whether the pane's first control reports a frame above its scroll
     /// view, which cannot be right straight after a tab switch.
     private func paneControlsAreAboveTheScrollView() -> Bool {
