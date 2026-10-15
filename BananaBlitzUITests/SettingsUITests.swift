@@ -135,6 +135,7 @@ final class SettingsUITests: BananaBlitzUITestCase {
         selectSettingsTab("Targets")
         element(AccessibilityID.Targets.row(Fixture.adPrivacy.id)).click()
         choose("Lock with Immutable File", inPopUp: AccessibilityID.Targets.strategy(Fixture.adPrivacy.id))
+        collapseTargetRow(Fixture.adPrivacy.id)
 
         selectSettingsTab("Data")
         waitFor(element(AccessibilityID.Settings.dryRun)).click()

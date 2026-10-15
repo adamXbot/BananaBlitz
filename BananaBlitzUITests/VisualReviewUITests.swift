@@ -77,6 +77,7 @@ final class VisualReviewUITests: BananaBlitzUITestCase {
         waitFor(element(AccessibilityID.Targets.row(Fixture.adPrivacy.id))).click()
         waitFor(element(AccessibilityID.Targets.strategy(Fixture.adPrivacy.id)))
         saveScreenshot("\(appearance)-settings-targets", of: settings)
+        collapseTargetRow(Fixture.adPrivacy.id)
 
         selectSettingsTab("Schedule")
         waitFor(element(AccessibilityID.Settings.scheduleInterval))

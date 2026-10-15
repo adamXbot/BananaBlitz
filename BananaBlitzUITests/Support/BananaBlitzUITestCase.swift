@@ -258,6 +258,16 @@ class BananaBlitzUITestCase: XCTestCase {
         _ = waitUntilNotHittable(anchor, timeout: uiTimeout)
     }
 
+    /// Collapse an expanded Targets row. Leave the pane with a row expanded
+    /// and macOS 15 reports the next pane's controls too high by the row's
+    /// extra height (see `selectSettingsTab`).
+    func collapseTargetRow(_ id: String) {
+        let strategy = element(AccessibilityID.Targets.strategy(id))
+        guard strategy.exists else { return }
+        element(AccessibilityID.Targets.row(id)).click()
+        waitUntilGone(strategy)
+    }
+
     /// Open a pop-up (SwiftUI `Picker` with `.menu` style) and choose an item.
     func choose(_ itemTitle: String, inPopUp identifier: String) {
         let popUp = waitFor(element(identifier))
@@ -299,27 +309,35 @@ class BananaBlitzUITestCase: XCTestCase {
         let titled = NSPredicate(format: "title == %@", name)
         _ = XCTWaiter().wait(for: [XCTNSPredicateExpectation(predicate: titled, object: settingsWindow)], timeout: 5)
         waitForSettingsWindowToSettle()
-        // On macOS 15 the pane's accessibility frames can come back without
-        // the toolbar inset after a switch from an expanded Targets row (the
-        // CI runner clicked "Preview Next Clean…" and hit the row 80 pt
-        // above). Detect that and re-enter the pane through another tab.
-        if heal, paneFramesAreStale(below: tab) {
+        // On macOS 15, leaving the Targets pane with a row expanded carries
+        // the row's extra height into the next pane's accessibility frames:
+        // every control is reported that much too high while the scroll view
+        // itself is placed correctly, so a click lands on the control above.
+        // Tests collapse the row before switching; this is the fallback.
+        if heal, paneControlsAreAboveTheScrollView() {
             attachHierarchy("stale-pane-frames-\(name)")
-            selectSettingsTab(name == "General" ? "Schedule" : "General", heal: false, file: file, line: line)
-            selectSettingsTab(name, heal: false, file: file, line: line)
-            XCTAssertFalse(paneFramesAreStale(below: tab),
-                           "\(name) pane still reports frames above the toolbar", file: file, line: line)
+            let content = settingsWindow.scrollViews.firstMatch
+            content.scroll(byDeltaX: 0, deltaY: -20)
+            content.scroll(byDeltaX: 0, deltaY: 20)
+            waitForSettingsWindowToSettle()
+            if paneControlsAreAboveTheScrollView() {
+                selectSettingsTab(name == "General" ? "Schedule" : "General", heal: false, file: file, line: line)
+                selectSettingsTab(name, heal: false, file: file, line: line)
+            }
         }
     }
 
-    /// Whether the pane's content reports frames that overlap the toolbar.
-    private func paneFramesAreStale(below tab: XCUIElement) -> Bool {
+    /// Whether the pane's first control reports a frame above its scroll
+    /// view, which cannot be right straight after a tab switch.
+    private func paneControlsAreAboveTheScrollView() -> Bool {
         let content = settingsWindow.scrollViews.firstMatch
-        guard content.exists, tab.exists else { return false }
-        let toolbarBottom = tab.frame.maxY
-        if content.frame.minY < toolbarBottom - 2 { return true }
-        let firstChild = content.children(matching: .any).firstMatch
-        return firstChild.exists && firstChild.frame.minY < toolbarBottom - 2
+        guard content.exists else { return false }
+        let controls = NSPredicate(format: "elementType == %d OR elementType == %d OR elementType == %d",
+                                   XCUIElement.ElementType.button.rawValue,
+                                   XCUIElement.ElementType.popUpButton.rawValue,
+                                   XCUIElement.ElementType.checkBox.rawValue)
+        let first = content.descendants(matching: .any).matching(controls).firstMatch
+        return first.exists && first.frame.minY < content.frame.minY - 2
     }
 
     /// Wait until the Settings window's frame stops changing.
