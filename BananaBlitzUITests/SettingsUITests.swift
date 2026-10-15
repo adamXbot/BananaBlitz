@@ -52,7 +52,7 @@ final class SettingsUITests: BananaBlitzUITestCase {
 
         waitFor(element(AccessibilityID.Settings.nextClean))
         choose("Every hour", inPopUp: AccessibilityID.Settings.scheduleInterval)
-        waitFor(element(AccessibilityID.Settings.pauseSchedule)).click()
+        clickControl(element(AccessibilityID.Settings.pauseSchedule))
         waitUntilGone(element(AccessibilityID.Settings.nextClean))
 
         openMenuBarPopover()
@@ -138,7 +138,7 @@ final class SettingsUITests: BananaBlitzUITestCase {
         collapseTargetRow(Fixture.adPrivacy.id)
 
         selectSettingsTab("Data")
-        waitFor(element(AccessibilityID.Settings.dryRun)).click()
+        clickControl(element(AccessibilityID.Settings.dryRun))
         waitForLabel(element(AccessibilityID.DryRun.title), toContain: "Preview Next Clean")
         XCTAssertFalse(element(AccessibilityID.DryRun.confirm).exists, "a preview has nothing to confirm")
         waitForLabel(element(AccessibilityID.DryRun.targetCount), toContain: "18")
@@ -151,9 +151,9 @@ final class SettingsUITests: BananaBlitzUITestCase {
 
         // Opting in to scheduled locking changes the preview accordingly.
         selectSettingsTab("Schedule")
-        waitFor(element(AccessibilityID.Settings.allowLocking)).click()
+        clickControl(element(AccessibilityID.Settings.allowLocking))
         selectSettingsTab("Data")
-        element(AccessibilityID.Settings.dryRun).click()
+        clickControl(element(AccessibilityID.Settings.dryRun))
         waitForLabel(element(AccessibilityID.DryRun.title), toContain: "Preview Next Clean")
         waitFor(element(AccessibilityID.DryRun.lockBadge))
         element(AccessibilityID.DryRun.close).click()
@@ -166,7 +166,7 @@ final class SettingsUITests: BananaBlitzUITestCase {
         let window = openSettings()
         selectSettingsTab("Data")
 
-        waitFor(element(AccessibilityID.Settings.selfTest)).click()
+        clickControl(element(AccessibilityID.Settings.selfTest))
         waitFor(element(AccessibilityID.SelfTest.title))
         // Biome (the access probe) and Ad Privacy exist in the sandbox.
         waitForLabel(element(AccessibilityID.SelfTest.healthy), toContain: "Healthy: 2")
@@ -189,7 +189,7 @@ final class SettingsUITests: BananaBlitzUITestCase {
 
         try sandbox.populate(.adPrivacy)
         selectSettingsTab("Data")
-        waitFor(element(AccessibilityID.Settings.rescan)).click()
+        clickControl(element(AccessibilityID.Settings.rescan))
         selectSettingsTab("Targets")
         waitForLabel(element(AccessibilityID.Targets.size(Fixture.adPrivacy.id)), toContain: "3 KB")
     }
@@ -199,7 +199,7 @@ final class SettingsUITests: BananaBlitzUITestCase {
         let settings = openSettings()
         selectSettingsTab("Data")
 
-        waitFor(settings.buttons["Reset All Settings…"].firstMatch).click()
+        clickControl(settings.buttons["Reset All Settings…"].firstMatch)
         let confirm = dialogButton("Reset Everything")
         waitFor(confirm)
         saveScreenshot("settings-reset-confirm", of: frontSheet)

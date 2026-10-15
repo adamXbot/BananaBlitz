@@ -40,7 +40,7 @@ final class DataExportUITests: BananaBlitzUITestCase {
         try launchApp()
         openSettings()
         selectSettingsTab("Data")
-        waitFor(element(AccessibilityID.Settings.saveRecoveryScript)).click()
+        clickControl(element(AccessibilityID.Settings.saveRecoveryScript))
 
         let destination = sandbox.home.appendingPathComponent("unbrick.sh")
         saveInPanel(directory: sandbox.home, filename: "unbrick.sh")
@@ -69,7 +69,7 @@ final class DataExportUITests: BananaBlitzUITestCase {
         openSettings()
         selectSettingsTab("Data")
 
-        waitFor(element(AccessibilityID.Settings.exportHistory)).click()
+        clickControl(element(AccessibilityID.Settings.exportHistory))
         saveInPanel(directory: sandbox.home, filename: "history.json")
         waitForLabel(element(AccessibilityID.Settings.historyStatus), toContain: "History saved to")
         let json = try Data(contentsOf: sandbox.home.appendingPathComponent("history.json"))
@@ -77,7 +77,7 @@ final class DataExportUITests: BananaBlitzUITestCase {
         XCTAssertEqual(entries.count, 18, "one entry per enabled target")
         XCTAssertTrue(entries.contains { ($0["targetID"] as? String) == Fixture.adPrivacy.id })
 
-        element(AccessibilityID.Settings.exportHistory).click()
+        clickControl(element(AccessibilityID.Settings.exportHistory))
         saveInPanel(directory: sandbox.home, filename: "history.csv")
         let csvURL = sandbox.home.appendingPathComponent("history.csv")
         let written = NSPredicate { _, _ in FileManager.default.fileExists(atPath: csvURL.path) }

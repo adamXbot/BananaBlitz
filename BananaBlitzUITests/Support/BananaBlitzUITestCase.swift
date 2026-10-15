@@ -309,21 +309,28 @@ class BananaBlitzUITestCase: XCTestCase {
         let titled = NSPredicate(format: "title == %@", name)
         _ = XCTWaiter().wait(for: [XCTNSPredicateExpectation(predicate: titled, object: settingsWindow)], timeout: 5)
         waitForSettingsWindowToSettle()
-        // On macOS 15, leaving the Targets pane with a row expanded carries
-        // the row's extra height into the next pane's accessibility frames:
-        // every control is reported that much too high while the scroll view
-        // itself is placed correctly, so a click lands on the control above.
-        // Tests collapse the row before switching; this is the fallback.
+        // On macOS 15 the runner sometimes reports a pane's controls without
+        // the title bar and toolbar inset (80 pt too high) while the scroll
+        // view itself is placed correctly. `clickControl` compensates; this
+        // only records the hierarchy so the condition stays visible.
         if heal, paneControlsAreAboveTheScrollView() {
             attachHierarchy("stale-pane-frames-\(name)")
-            let content = settingsWindow.scrollViews.firstMatch
-            content.scroll(byDeltaX: 0, deltaY: -20)
-            content.scroll(byDeltaX: 0, deltaY: 20)
-            waitForSettingsWindowToSettle()
-            if paneControlsAreAboveTheScrollView() {
-                selectSettingsTab(name == "General" ? "Schedule" : "General", heal: false, file: file, line: line)
-                selectSettingsTab(name, heal: false, file: file, line: line)
-            }
+        }
+    }
+
+    /// Click a control inside a Settings pane. When the pane reports the
+    /// control above its scroll view (the macOS 15 inset bug noted in
+    /// `selectSettingsTab`), click at the compensated position instead.
+    func clickControl(_ control: XCUIElement, file: StaticString = #filePath, line: UInt = #line) {
+        waitFor(control, file: file, line: line)
+        let content = settingsWindow.scrollViews.firstMatch
+        if content.exists, control.frame.minY < content.frame.minY - 2 {
+            let inset = content.frame.minY - settingsWindow.frame.minY
+            control.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
+                .withOffset(CGVector(dx: 0, dy: inset))
+                .click()
+        } else {
+            control.click()
         }
     }
 

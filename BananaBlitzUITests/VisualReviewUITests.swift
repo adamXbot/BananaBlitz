@@ -87,19 +87,19 @@ final class VisualReviewUITests: BananaBlitzUITestCase {
         waitFor(element(AccessibilityID.Settings.dryRun))
         saveScreenshot("\(appearance)-settings-data", of: settings)
 
-        element(AccessibilityID.Settings.dryRun).click()
+        clickControl(element(AccessibilityID.Settings.dryRun))
         waitForLabel(element(AccessibilityID.DryRun.title), toContain: "Preview Next Clean")
         saveScreenshot("\(appearance)-settings-dry-run", of: settings)
         element(AccessibilityID.DryRun.close).click()
         waitUntilGone(element(AccessibilityID.DryRun.title))
 
-        element(AccessibilityID.Settings.selfTest).click()
+        clickControl(element(AccessibilityID.Settings.selfTest))
         waitFor(element(AccessibilityID.SelfTest.title))
         saveScreenshot("\(appearance)-settings-self-test", of: settings)
         element(AccessibilityID.SelfTest.close).click()
         waitUntilGone(element(AccessibilityID.SelfTest.title))
 
-        settings.buttons["Reset All Settings…"].firstMatch.click()
+        clickControl(settings.buttons["Reset All Settings…"].firstMatch)
         waitFor(dialogButton("Reset Everything"))
         saveScreenshot("\(appearance)-settings-reset-confirm", of: frontSheet)
         dialogButton("Cancel").click()
