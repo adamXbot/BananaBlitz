@@ -5,8 +5,8 @@ BananaBlitz ships through two channels that share the same DMG:
 1. **Direct download.** A Developer ID signed and notarised DMG attached to
    a GitHub Release. Sparkle inside the running app polls
    [`https://adamxweb.com/bananablitz/appcast.xml`][appcast] and
-   offers the update to anyone who installed via that DMG, once `SUFeedURL`
-   and `SUPublicEDKey` are set in `Info.plist` (they are not yet; see
+   offers the update to anyone who installed via that DMG. `SUFeedURL` and
+   `SUPublicEDKey` are set in `Info.plist` since v1.1.0 (see
    [Turning Sparkle on](#turning-sparkle-on)).
 2. **Homebrew Cask.** `brew install adamxbot/tap/bananablitz`, served from
    [`adamxbot/homebrew-tap`][tap]. Each release renders the template in
@@ -179,18 +179,20 @@ refreshes the same branch and reuses the open PR.
 
 ## Turning Sparkle on
 
-In-app updates are dormant until `Info.plist` carries both keys:
+Done in v1.1.0: `Info.plist` carries both keys, the key pair was generated
+with `generate_keys --account BananaBlitz` (the private half is in the
+maintainer's login keychain and must be added to CI as `SPARKLE_PRIVATE_KEY`),
+and the orphan `gh-pages` branch exists. The keys are:
 
 ```xml
 <key>SUFeedURL</key>
 <string>https://adamxweb.com/bananablitz/appcast.xml</string>
 <key>SUPublicEDKey</key>
-<string>…public key from generate_keys…</string>
+<string>Qxx5Nb6RBuffgou+hwgSyl92JUu95Os5R67uglVS/xE=</string>
 ```
 
-`UpdaterService` then leaves its dormant state on next launch and the
-in-app "Check for Updates…" command becomes active. Ship this in a release
-only after step 3 has a live feed, or every installed copy will poll a 404.
+`UpdaterService` starts Sparkle at launch (except under the test suites);
+automatic checks stay off until the user turns them on in Settings ▸ Updates.
 
 ## Cutting a release
 

@@ -15,6 +15,7 @@ struct DashboardView: View {
             // Stat tiles
             HStack(spacing: 8) {
                 statTile(
+                    id: AccessibilityID.Dashboard.totalReclaimed,
                     title: "Reclaimed",
                     value: appState.totalBytesReclaimed.formattedBytes,
                     icon: "arrow.down.circle.fill",
@@ -23,6 +24,7 @@ struct DashboardView: View {
                 )
 
                 statTile(
+                    id: AccessibilityID.Dashboard.targetsEnabled,
                     title: "Targets",
                     value: "\(appState.enabledTargetIDs.count)/\(PrivacyTarget.allTargets.count)",
                     icon: "target",
@@ -31,6 +33,7 @@ struct DashboardView: View {
                 )
 
                 statTile(
+                    id: AccessibilityID.Dashboard.lastClean,
                     title: "Last clean",
                     value: lastCleanString,
                     icon: "clock.fill",
@@ -50,6 +53,7 @@ struct DashboardView: View {
                         Text("No cleaning history yet")
                             .font(.system(size: 10))
                             .foregroundStyle(.secondary)
+                            .accessibilityIdentifier(AccessibilityID.Dashboard.emptyHistory)
                         Spacer()
                     }
                     .padding(.vertical, 10)
@@ -74,7 +78,7 @@ struct DashboardView: View {
 
     // MARK: - Components
 
-    private func statTile(title: String, value: String, icon: String, color: Color, accessibility: String) -> some View {
+    private func statTile(id: String, title: String, value: String, icon: String, color: Color, accessibility: String) -> some View {
         VStack(spacing: 4) {
             Image(systemName: icon)
                 .font(.system(size: 14))
@@ -101,6 +105,7 @@ struct DashboardView: View {
         )
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("\(accessibility): \(value)")
+        .accessibilityIdentifier(id)
     }
 
     private func historyRow(_ result: CleaningResult) -> some View {
@@ -113,6 +118,7 @@ struct DashboardView: View {
                 Text(result.targetName)
                     .font(.system(size: 10, weight: .medium))
                     .lineLimit(1)
+                    .accessibilityIdentifier(AccessibilityID.Dashboard.historyRow(result.targetID))
 
                 // Why a target failed, or why a success touched nothing. Both
                 // are recorded on every result, so show them.
@@ -145,6 +151,8 @@ struct DashboardView: View {
 
     private var lastCleanString: String {
         guard let date = appState.lastCleanDate else { return "Never" }
+        // The relative formatter says "in 0 secs" for the first moments.
+        if Date().timeIntervalSince(date) < 60 { return "Just now" }
         let formatter = RelativeDateTimeFormatter()
         formatter.unitsStyle = .abbreviated
         return formatter.localizedString(for: date, relativeTo: Date())
@@ -163,6 +171,7 @@ struct DashboardView: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Last clean had \(recent.count) failure\(recent.count == 1 ? "" : "s")")
                         .font(.system(size: 11, weight: .semibold))
+                        .accessibilityIdentifier(AccessibilityID.Dashboard.failureBanner)
                     Text(failureLines(recent))
                         .font(.system(size: 10))
                         .foregroundStyle(.secondary)

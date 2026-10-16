@@ -85,6 +85,7 @@ struct SnapshotStepView: View {
                     }
                     .buttonStyle(.plain)
                     .disabled(snapshotStatus == .creating)
+                    .accessibilityIdentifier(AccessibilityID.Onboarding.createSnapshot)
                     
                     if let error = errorMessage {
                         Text(error)

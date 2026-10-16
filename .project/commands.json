@@ -44,6 +44,9 @@
     "test": {
       "description": "Run the default automated tests"
     },
+    "ui-test": {
+      "description": "Run the end-to-end UI suite against a sandboxed home (needs a logged-in GUI session)"
+    },
     "version": {
       "description": "Change the marketing version deliberately"
     },
@@ -162,6 +165,20 @@
               "python3",
               ".project/mac_surfaces.py",
               "sync"
+            ],
+            "cwd": "."
+          }
+        ],
+        "ui-test": [
+          {
+            "argv": [
+              "just",
+              "--justfile",
+              ".project/adapters.just",
+              "--working-directory",
+              "{root}",
+              "ui-test",
+              "{filter}"
             ],
             "cwd": "."
           }

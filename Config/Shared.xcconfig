@@ -1,5 +1,5 @@
 // Shared marketing version and generated build identity for every shipping target.
-MARKETING_VERSION = 1.0.1
+MARKETING_VERSION = 1.1.0
 CURRENT_PROJECT_VERSION = $(BUILD_NUMBER)
 BUILD_NUMBER = 0
 BUILD_SHA =

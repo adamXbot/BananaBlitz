@@ -55,6 +55,10 @@ docs-check:
 test:
     @python3 .project/projectctl.py test --target {{quote(target)}} --platform {{quote(platform)}} --environment {{quote(environment)}} --channel {{quote(channel)}} --suite {{quote(suite)}} --package {{quote(package)}} --filter {{quote(filter)}} --state {{quote(state)}} --width {{quote(width)}} --height {{quote(height)}}
 
+# Run the end-to-end UI suite against a sandboxed home (needs a logged-in GUI session)
+ui-test selection=filter:
+    @python3 .project/projectctl.py ui-test --target {{quote(target)}} --platform {{quote(platform)}} --environment {{quote(environment)}} --channel {{quote(channel)}} --suite {{quote(suite)}} --package {{quote(package)}} --filter {{quote(selection)}} --state {{quote(state)}} --width {{quote(width)}} --height {{quote(height)}}
+
 # Change the marketing version deliberately
 version chosen notes_file:
     @python3 .project/projectctl.py version {{quote(chosen)}} --notes {{quote(notes_file)}} --target {{quote(target)}} --platform {{quote(platform)}} --environment {{quote(environment)}} --channel {{quote(channel)}} --suite {{quote(suite)}} --package {{quote(package)}} --filter {{quote(filter)}} --state {{quote(state)}} --width {{quote(width)}} --height {{quote(height)}}

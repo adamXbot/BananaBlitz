@@ -48,13 +48,12 @@ Some of these paths back real features, so cleaning them makes suggestions and p
 brew install adamxbot/tap/bananablitz
 ```
 
-The tap is currently serving 0.0.2 while the latest release is v0.0.3 — if you want the newest build today, take the DMG.
 
 **Direct download:** the DMG attached to the [latest release](https://github.com/adamXbot/BananaBlitz/releases/latest). Releases v0.0.1 to v0.0.3 were built locally and are ad-hoc signed rather than notarised, so Gatekeeper warns on first open (right-click → Open). Releases cut through [`release.yml`](.github/workflows/release.yml) are Developer ID signed and notarised.
 
 Requires macOS 14 or later. Because macOS protects `~/Library` from sandboxed apps, BananaBlitz ships without the App Sandbox and needs **Full Disk Access** — the onboarding wizard walks you through granting it.
 
-In-app updates use [Sparkle](https://github.com/sparkle-project/Sparkle) but are dormant: `SUFeedURL` and `SUPublicEDKey` are not yet in `Info.plist`, so the Updates tab and "Check for Updates…" have nothing to check. Everything else works. [`docs/RELEASES.md`](docs/RELEASES.md) covers what turning it on requires.
+In-app updates use [Sparkle](https://github.com/sparkle-project/Sparkle): from v1.1.0 the app checks the signed appcast each release publishes and offers the update in place. Automatic checks are off until you turn them on in Settings → Updates. [`docs/RELEASES.md`](docs/RELEASES.md) covers how the feed is produced.
 
 ## Docs
 

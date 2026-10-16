@@ -62,24 +62,22 @@ enum ScheduleInterval: Double, CaseIterable, Codable, Identifiable {
     }
 }
 
-// MARK: - Storage Keys
+// MARK: - Manual clean outcome
 
-/// Centralised AppStorage keys to avoid drift on rename.
-enum StorageKey {
-    static let hasCompletedOnboarding = "hasCompletedOnboarding"
-    static let onboardingStep         = "onboardingStep"
-    static let selectedLevelRaw       = "selectedLevelRaw"
-    static let scheduleIntervalRaw    = "scheduleIntervalRaw"
-    static let notificationStyleRaw   = "notificationStyleRaw"
-    static let isPaused               = "isPaused"
-    static let showMenuBarStatus      = "showMenuBarStatus"
-    /// Legacy: builds before the shared surfaces stored the menu bar icon
-    /// here. Read once by `MenuBarIconStyle.migrateLegacyPreference` and
-    /// then removed; the icon now lives under `MenuBarIconStyle.preferenceKey`.
-    static let menuBarIconStyleRaw    = "menuBarIconStyleRaw"
-    static let enableKeyboardShortcut = "enableKeyboardShortcut"
-    static let globalStrategyRaw      = "globalStrategyRaw"
-    static let allowAggressiveScheduledClean = "allowAggressiveScheduledClean"
+/// Summary of one manual blitz, shown inline in the popover.
+struct ManualCleanOutcome: Equatable {
+    let succeeded: Int
+    let failed: Int
+    /// Successful results that touched nothing because the target is locked.
+    let skipped: Int
+    let bytes: Int64
+
+    init(results: [CleaningResult]) {
+        succeeded = results.filter(\.success).count
+        failed = results.count - succeeded
+        skipped = results.filter { $0.note != nil }.count
+        bytes = results.reduce(Int64(0)) { $0 + $1.bytesReclaimed }
+    }
 }
 
 // MARK: - App State
@@ -90,21 +88,21 @@ class AppState: ObservableObject {
 
     // MARK: Simple Preferences (AppStorage)
 
-    @AppStorage(StorageKey.hasCompletedOnboarding) var hasCompletedOnboarding: Bool = false
-    @AppStorage(StorageKey.selectedLevelRaw)       var selectedLevelRaw: String = CleaningLevel.strong.rawValue
-    @AppStorage(StorageKey.scheduleIntervalRaw)    var scheduleIntervalRaw: Double = ScheduleInterval.fourHours.rawValue
-    @AppStorage(StorageKey.notificationStyleRaw)   var notificationStyleRaw: String = NotificationStyle.summary.rawValue
-    @AppStorage(StorageKey.isPaused)               var isPaused: Bool = false
-    @AppStorage(StorageKey.showMenuBarStatus)      var showMenuBarStatus: Bool = true
-    @AppStorage(StorageKey.enableKeyboardShortcut) var enableKeyboardShortcut: Bool = false
-    @AppStorage(StorageKey.globalStrategyRaw)      var globalStrategyRaw: String = CleaningStrategy.wipeContents.rawValue
+    @AppStorage(StorageKey.hasCompletedOnboarding, store: LaunchConfiguration.defaults) var hasCompletedOnboarding: Bool = false
+    @AppStorage(StorageKey.selectedLevelRaw, store: LaunchConfiguration.defaults)       var selectedLevelRaw: String = CleaningLevel.strong.rawValue
+    @AppStorage(StorageKey.scheduleIntervalRaw, store: LaunchConfiguration.defaults)    var scheduleIntervalRaw: Double = ScheduleInterval.fourHours.rawValue
+    @AppStorage(StorageKey.notificationStyleRaw, store: LaunchConfiguration.defaults)   var notificationStyleRaw: String = NotificationStyle.summary.rawValue
+    @AppStorage(StorageKey.isPaused, store: LaunchConfiguration.defaults)               var isPaused: Bool = false
+    @AppStorage(StorageKey.showMenuBarStatus, store: LaunchConfiguration.defaults)      var showMenuBarStatus: Bool = true
+    @AppStorage(StorageKey.enableKeyboardShortcut, store: LaunchConfiguration.defaults) var enableKeyboardShortcut: Bool = false
+    @AppStorage(StorageKey.globalStrategyRaw, store: LaunchConfiguration.defaults)      var globalStrategyRaw: String = CleaningStrategy.wipeContents.rawValue
 
     /// Opt-in: allow unattended scheduled/catch-up cleans to run the destructive
     /// "Lock with Immutable File" strategy. Off by default — scheduled cleans
     /// have no confirmation gate, so by default any aggressive strategy is
     /// downgraded to a non-destructive wipe for unattended runs. See
     /// `SchedulerService.sanitiseForUnattendedRun`.
-    @AppStorage(StorageKey.allowAggressiveScheduledClean) var allowAggressiveScheduledClean: Bool = false
+    @AppStorage(StorageKey.allowAggressiveScheduledClean, store: LaunchConfiguration.defaults) var allowAggressiveScheduledClean: Bool = false
 
     // MARK: Published State
 
@@ -127,6 +125,11 @@ class AppState: ObservableObject {
     /// `scanResults` so the Targets tab can say "not present" instead of
     /// showing an empty row.
     @Published var targetPresence: [String: Bool] = [:]
+
+    /// Result of the most recent "Blitz Now", shown inline in the popover.
+    /// Lives here rather than in the popover's own state because the popover
+    /// closes while the confirmation window is up.
+    @Published var lastManualCleanOutcome: ManualCleanOutcome?
 
     /// Cached Full Disk Access status. Refreshed via a `.task` poller in views
     /// that need it; never call `PermissionChecker.hasFullDiskAccess()` from
@@ -176,6 +179,8 @@ class AppState: ObservableObject {
     /// Status label for the menu bar.
     var statusSummary: String {
         guard let last = lastCleanDate else { return "Never cleaned" }
+        // The relative formatter says "in 0 secs" for the first moments.
+        if Date().timeIntervalSince(last) < 60 { return "Cleaned just now" }
         let formatter = RelativeDateTimeFormatter()
         formatter.unitsStyle = .abbreviated
         return "Cleaned \(formatter.localizedString(for: last, relativeTo: Date()))"
@@ -419,7 +424,7 @@ class AppState: ObservableObject {
         lockStates.removeAll()
         targetPresence.removeAll()
         // Restart the onboarding wizard from step 0.
-        UserDefaults.standard.removeObject(forKey: StorageKey.onboardingStep)
+        LaunchConfiguration.defaults.removeObject(forKey: StorageKey.onboardingStep)
         savePersistedData()
     }
 }

@@ -16,9 +16,11 @@ struct SelfTestSheet: View {
                     .font(.title3)
                 Text("Self-Test Report")
                     .font(.system(size: 14, weight: .semibold))
+                    .accessibilityIdentifier(AccessibilityID.SelfTest.title)
                 Spacer()
                 Button("Close", action: onClose)
                     .keyboardShortcut(.cancelAction)
+                    .accessibilityIdentifier(AccessibilityID.SelfTest.close)
             }
             .padding()
 
@@ -26,9 +28,9 @@ struct SelfTestSheet: View {
 
             // Summary header
             HStack(spacing: 16) {
-                summary("Healthy", value: okCount, color: .green)
-                summary("Locked", value: lockedCount, color: .orange)
-                summary("Denied", value: deniedCount, color: .red)
+                summary("Healthy", value: okCount, color: .green, id: AccessibilityID.SelfTest.healthy)
+                summary("Locked", value: lockedCount, color: .orange, id: AccessibilityID.SelfTest.locked)
+                summary("Denied", value: deniedCount, color: .red, id: AccessibilityID.SelfTest.denied)
             }
             .padding()
 
@@ -54,6 +56,7 @@ struct SelfTestSheet: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(report.target.name)
                     .font(.system(size: 12, weight: .medium))
+                    .accessibilityIdentifier(AccessibilityID.SelfTest.row(report.target.id))
                 Text(report.detail)
                     .font(.system(size: 10))
                     .foregroundStyle(.secondary)
@@ -70,11 +73,12 @@ struct SelfTestSheet: View {
         )
     }
 
-    private func summary(_ label: String, value: Int, color: Color) -> some View {
+    private func summary(_ label: String, value: Int, color: Color, id: String) -> some View {
         HStack(spacing: 6) {
             Circle().fill(color).frame(width: 8, height: 8)
             Text("\(label): \(value)")
                 .font(.system(size: 11))
+                .accessibilityIdentifier(id)
         }
     }
 

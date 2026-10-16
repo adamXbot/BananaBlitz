@@ -44,6 +44,12 @@ struct LevelPickerStepView: View {
         .padding(16)
         .onAppear {
             selectedLevel = appState.selectedLevel
+            // `onChange` below only fires when the user picks a *different*
+            // card. Accepting the pre-selected level with Continue used to
+            // leave no targets enabled, so the first blitz cleaned nothing.
+            if appState.enabledTargetIDs.isEmpty {
+                appState.setDefaultTargets(for: selectedLevel)
+            }
             withAnimation(.spring(response: 0.6, dampingFraction: 0.8).delay(0.2)) {
                 isRevealed = true
             }
@@ -123,6 +129,8 @@ struct LevelPickerStepView: View {
             .scaleEffect(isSelected ? 1.02 : 1.0)
         }
         .buttonStyle(.plain)
+        .accessibilityIdentifier(AccessibilityID.Onboarding.levelCard(level.rawValue))
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 
     // MARK: - Summary
@@ -137,6 +145,7 @@ struct LevelPickerStepView: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text("\(selectedLevel.displayName) level: \(targets.count) targets will be cleaned")
                     .font(.system(size: 12, weight: .medium))
+                    .accessibilityIdentifier(AccessibilityID.Onboarding.levelSummary)
 
                 Text("You can enable/disable individual targets in Settings after setup.")
                     .font(.system(size: 10))

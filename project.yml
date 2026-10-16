@@ -86,6 +86,26 @@ targets:
         MACOSX_DEPLOYMENT_TARGET: "14.0"
         GENERATE_INFOPLIST_FILE: YES
 
+  # End-to-end XCUITest suite (`just ui-test`). Launches the real app against
+  # a throwaway home directory (see BananaBlitz/Support/LaunchConfiguration)
+  # and drives it through the menu bar, setup, Settings and a full clean. It
+  # has its own scheme: the runner must be ad-hoc signed, and the shared CI
+  # runs the BananaBlitz scheme with signing disabled.
+  BananaBlitzUITests:
+    type: bundle.ui-testing
+    platform: macOS
+    sources:
+      - path: BananaBlitzUITests
+      - path: BananaBlitz/Support/AccessibilityID.swift
+      - path: BananaBlitz/Support/StorageKey.swift
+    dependencies:
+      - target: BananaBlitz
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.bananablitz.uitests
+        MACOSX_DEPLOYMENT_TARGET: "14.0"
+        GENERATE_INFOPLIST_FILE: YES
+
 schemes:
   BananaBlitz:
     build:
@@ -100,6 +120,20 @@ schemes:
       targets:
         - BananaBlitzTests
       gatherCoverageData: true
+    run:
+      config: Debug
+  BananaBlitz UI Tests:
+    build:
+      targets:
+        BananaBlitz: all
+        BananaBlitzUITests: [test]
+      preActions:
+        - name: Capture shared build identity
+          settingsTarget: BananaBlitz
+          script: env -u SDKROOT /usr/bin/python3 "$SRCROOT/Scripts/prepare-build-info.py" session
+    test:
+      targets:
+        - BananaBlitzUITests
     run:
       config: Debug
 configFiles:

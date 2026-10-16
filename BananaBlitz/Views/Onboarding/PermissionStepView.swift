@@ -27,6 +27,7 @@ struct PermissionStepView: View {
             VStack(spacing: 8) {
                 Text(hasAccess ? "Full Disk Access Granted" : "Full Disk Access Required")
                     .font(.system(size: 20, weight: .bold, design: .rounded))
+                    .accessibilityIdentifier(AccessibilityID.Onboarding.permissionTitle)
 
                 Text(hasAccess
                      ? "BananaBlitz can now access and clean protected system folders."
@@ -45,6 +46,9 @@ struct PermissionStepView: View {
                         .foregroundStyle(.tertiary)
                         .multilineTextAlignment(.center)
                         .frame(maxWidth: 420)
+                        // Without this the stack squeezes the paragraph to one
+                        // truncated line ("…reach the tracking fold…").
+                        .fixedSize(horizontal: false, vertical: true)
 
                     // Steps
                     VStack(alignment: .leading, spacing: 12) {
@@ -76,6 +80,7 @@ struct PermissionStepView: View {
                         )
                     }
                     .buttonStyle(.plain)
+                    .accessibilityIdentifier(AccessibilityID.Onboarding.openSystemSettings)
 
                     // Polling indicator
                     HStack(spacing: 8) {

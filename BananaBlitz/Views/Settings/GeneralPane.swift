@@ -25,12 +25,14 @@ struct GeneralPane: View {
                     info: "A small dot on the banana: green while the schedule is armed, grey while it is paused, blue during a clean, and orange until setup is finished."
                 )
             }
+            .accessibilityIdentifier(AccessibilityID.Settings.menuBarStatus)
             Toggle(isOn: $appState.enableKeyboardShortcut) {
                 SurfaceInfoLabel(
                     "Open with ⌘⌃B from anywhere",
                     info: "A global shortcut that opens the menu bar item from any app. Off by default."
                 )
             }
+            .accessibilityIdentifier(AccessibilityID.Settings.keyboardShortcut)
         }
 
         Section("Notifications") {
@@ -47,6 +49,7 @@ struct GeneralPane: View {
                     )
                 }
                 .pickerStyle(.segmented)
+                .accessibilityIdentifier(AccessibilityID.Settings.notificationStyle)
 
                 notificationWarning
             }
@@ -58,6 +61,7 @@ struct GeneralPane: View {
                 Button("Open System Settings…") {
                     PermissionChecker.shared.openFullDiskAccessSettings()
                 }
+                .accessibilityIdentifier(AccessibilityID.Settings.openFullDiskAccess)
             } label: {
                 SurfaceInfoLabel(
                     "Full Disk Access",
@@ -66,6 +70,7 @@ struct GeneralPane: View {
                 Text(appState.fullDiskAccessGranted ? "Granted" : "Not granted: protected targets cannot be read or cleaned")
                     .font(.caption)
                     .foregroundStyle(appState.fullDiskAccessGranted ? AnyShapeStyle(.secondary) : AnyShapeStyle(.red))
+                    .accessibilityIdentifier(AccessibilityID.Settings.fullDiskAccessStatus)
             }
         }
         .task { await pollFullDiskAccess() }
